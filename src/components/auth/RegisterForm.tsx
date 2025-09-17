@@ -8,14 +8,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Eye, EyeOff, Mail, Lock, Building2, Loader2 } from 'lucide-react';
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  Building2,
+  Loader2,
+  CheckCircle2,
+} from 'lucide-react';
 
 const RegisterForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [showVerificationMessage, setShowVerificationMessage] = useState(false);
 
   const form = useForm<RegisterData>({
     resolver: zodResolver(registerSchema),
@@ -30,13 +38,12 @@ const RegisterForm = () => {
   const onSubmit = async (values: RegisterData) => {
     setIsLoading(true);
     setError('');
-    setSuccessMessage('');
 
     try {
       const result = await signup(values);
 
       if (result.success) {
-        setSuccessMessage(result.data.message);
+        setShowVerificationMessage(true);
         form.reset();
       } else {
         // TypeScript now knows this is the error type
@@ -48,19 +55,41 @@ const RegisterForm = () => {
       setIsLoading(false);
     }
   };
+
+  // Show email verification message instead of the form
+  if (showVerificationMessage) {
+    return (
+      <div className="text-center space-y-6">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+            <CheckCircle2 className="w-8 h-8 text-green-600" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-foreground">
+              Check your email
+            </h3>
+            <p className="text-muted-foreground text-sm max-w-sm">
+              We've sent a verification link to your email address. Please check
+              your inbox and click the link to verify your account.
+            </p>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => setShowVerificationMessage(false)}
+          className="w-full"
+        >
+          Back to registration
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {successMessage && (
-        <Alert>
-          <AlertDescription className="text-primary">
-            {successMessage}
-          </AlertDescription>
         </Alert>
       )}
 

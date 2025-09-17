@@ -22,8 +22,6 @@ export async function GET(request: NextRequest) {
         // redirect user to specified redirect URL or root of app
         redirect(next);
       }
-
-      redirect(`/error?message=${error.message}`);
     }
   } catch (e) {
     const message =
