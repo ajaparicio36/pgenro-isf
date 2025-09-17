@@ -4,7 +4,6 @@ import {
 } from '@/utils/responseHandler';
 import { createClient } from '@/utils/supabase/server';
 import prisma from '@/utils/prisma';
-import { NextRequest } from 'next/server';
 
 export const GET = async () => {
   try {

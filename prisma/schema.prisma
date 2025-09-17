@@ -41,8 +41,7 @@ model Sheet {
   title     String
   content   Json
   company   Company  @relation(fields: [companyId], references: [id])
-  companyId String
-  userId    String
+  companyId String   @unique
   createdAt DateTime @default(now()) @db.Timestamptz
   updatedAt DateTime @updatedAt @db.Timestamptz
 }
