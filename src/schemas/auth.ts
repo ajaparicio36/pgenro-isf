@@ -30,9 +30,35 @@ export const registerSchema = z
 export type RegisterData = z.infer<typeof registerSchema>;
 
 export type LoginResponse = {
-  message: string;
+  success: boolean;
+  data: {
+    message: string;
+  };
 };
 
 export type RegisterResponse = {
-  message: string;
+  success: boolean;
+  data: {
+    message: string;
+  };
 };
+
+export interface User {
+  id: string;
+  email: string;
+}
+
+export interface Company {
+  id: string;
+  companyName: string;
+}
+
+export interface AuthData {
+  user: User;
+  company: Company;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  data: AuthData;
+}

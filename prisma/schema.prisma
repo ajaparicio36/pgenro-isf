@@ -20,6 +20,7 @@ model Company {
   createdAt   DateTime @default(now()) @db.Timestamptz
   updatedAt   DateTime @updatedAt @db.Timestamptz
   User        User[]
+  Sheet       Sheet[]
 }
 
 model User {
@@ -33,4 +34,15 @@ model User {
   permissions String[]
   createdAt   DateTime @default(now()) @db.Timestamptz
   updatedAt   DateTime @updatedAt @db.Timestamptz
+}
+
+model Sheet {
+  id        String   @id @default(cuid())
+  title     String
+  content   Json
+  company   Company  @relation(fields: [companyId], references: [id])
+  companyId String
+  userId    String
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
 }

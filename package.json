@@ -14,7 +14,7 @@
       "eslint --fix",
       "prettier --write"
     ],
-    "*.{json,css,md,prisma}": "prettier --write"
+    "*.{json,css,md}": "prettier --write"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -68,6 +68,7 @@
     "recharts": "2.15.4",
     "shadcn": "^3.3.1",
     "sonner": "^2.0.7",
+    "swr": "^2.3.6",
     "tailwind-merge": "^3.3.1",
     "vaul": "^1.1.2",
     "zod": "^4.1.9"
