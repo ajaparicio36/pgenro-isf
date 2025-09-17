@@ -6,10 +6,21 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,md,prisma}": "prettier --write"
   },
   "dependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.6",
     "next": "15.5.3",
+    "prettier": "^3.6.2",
     "prisma": "^6.16.2",
     "react": "19.1.0",
     "react-dom": "19.1.0"
