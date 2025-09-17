@@ -30,14 +30,14 @@ export const registerSchema = z
 export type RegisterData = z.infer<typeof registerSchema>;
 
 export type LoginResponse = {
-  success: boolean;
+  success: true;
   data: {
     message: string;
   };
 };
 
 export type RegisterResponse = {
-  success: boolean;
+  success: true;
   data: {
     message: string;
   };

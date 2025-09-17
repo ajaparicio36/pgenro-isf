@@ -10,7 +10,7 @@ export const createActionSuccessResponse = <T>(data: T) => {
 
 export const createActionErrorResponse = (message: string) => {
   return {
-    success: false,
+    success: false as const,
     message,
   };
 };

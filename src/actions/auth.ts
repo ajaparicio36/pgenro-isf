@@ -4,8 +4,10 @@ import { createClient } from '@/utils/supabase/server';
 import {
   LoginData,
   loginSchema,
+  LoginResponse,
   RegisterData,
   registerSchema,
+  RegisterResponse,
 } from '@/schemas/auth';
 import {
   createActionErrorResponse,
@@ -14,7 +16,9 @@ import {
 } from '@/utils/responseHandler';
 import prisma from '@/utils/prisma';
 
-export async function login(values: LoginData) {
+export async function login(
+  values: LoginData
+): Promise<LoginResponse | { success: false; message: string }> {
   const supabase = await createClient();
 
   const validatedData = loginSchema.safeParse(values);
@@ -36,10 +40,12 @@ export async function login(values: LoginData) {
 
   return createActionSuccessResponse({
     message: 'Login successful!',
-  });
+  }) as LoginResponse;
 }
 
-export async function signup(values: RegisterData) {
+export async function signup(
+  values: RegisterData
+): Promise<RegisterResponse | { success: false; message: string }> {
   const supabase = await createClient();
 
   const validatedData = registerSchema.safeParse(values);
@@ -76,5 +82,5 @@ export async function signup(values: RegisterData) {
 
   return createActionSuccessResponse({
     message: 'Check your email for the login link!',
-  });
+  }) as RegisterResponse;
 }
