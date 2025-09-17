@@ -34,3 +34,30 @@ model User {
   createdAt   DateTime @default(now()) @db.Timestamptz
   updatedAt   DateTime @updatedAt @db.Timestamptz
 }
+
+// [{"code":603001000,"name":"Ajuy","barangays":[{"municipality_code":603001000,"municipality_name":"Ajuy","barangay_code":603001001,"barangay_name":"Adcadarao"},{"municipality_code":603001000,"municipality_name":"Ajuy","barangay_code":603001002,"barangay_name":"Agbobolo"}]
+
+model Municipality {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  code      String   @unique // official PGIS code
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  barangays Barangay[]
+
+  @@index([code])
+}
+
+model Barangay {
+  id             String       @id @default(uuid()) @db.Uuid
+  name           String
+  municipality   Municipality @relation(fields: [municipalityId], references: [id], onDelete: Cascade)
+  municipalityId String       @db.Uuid
+  officialCode   String       @unique // official PGIS code
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([name, municipalityId])
+  @@index([officialCode])
+}
