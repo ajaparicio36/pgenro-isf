@@ -34,26 +34,35 @@ import {
   Eye,
   Filter,
   X,
+  Upload,
+  Loader2,
+  ArrowLeft,
 } from 'lucide-react';
 import Link from 'next/link';
 import { DASHBOARD_ROUTES } from '@/lib/routes';
 import { format } from 'date-fns';
+import MultipleStewardsForm from '@/components/stewards/MultipleStewardsForm';
+import { toast } from 'sonner';
 
 const StewardsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState('');
   const [selectedMunicipalityId, setSelectedMunicipalityId] = useState('');
   const [selectedBarangayId, setSelectedBarangayId] = useState('');
+  const [showImport, setShowImport] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importedStewards, setImportedStewards] = useState<any[]>([]);
 
   const limit = 10;
 
-  const { stewards, totalPages, totalStewards, isLoading, error } = useStewards(
-    currentPage,
-    limit,
-    search,
-    selectedMunicipalityId,
-    selectedBarangayId
-  );
+  const { stewards, totalPages, totalStewards, isLoading, error, mutate } =
+    useStewards(
+      currentPage,
+      limit,
+      search,
+      selectedMunicipalityId,
+      selectedBarangayId
+    );
 
   const { municipalities, isLoading: municipalitiesLoading } =
     useMunicipalities();
@@ -90,6 +99,49 @@ const StewardsPage = () => {
     setCurrentPage(1);
   };
 
+  const handleImport = async (file: File, instructions?: string) => {
+    setIsImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (instructions) {
+        formData.append('instructions', instructions);
+      }
+
+      const response = await fetch('/api/import/steward', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setImportedStewards(result.data);
+        setShowImport(false);
+        toast.success(
+          `Successfully interpreted ${result.data.length} steward(s)`
+        );
+      } else {
+        toast.error(result.error || 'Failed to import stewards');
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      toast.error('An error occurred during import');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleImportSuccess = () => {
+    setImportedStewards([]);
+    mutate(); // Refresh stewards list
+    toast.success('Stewards imported successfully!');
+  };
+
+  const handleImportCancel = () => {
+    setImportedStewards([]);
+  };
+
   const hasActiveFilters =
     search || selectedMunicipalityId || selectedBarangayId;
 
@@ -107,25 +159,116 @@ const StewardsPage = () => {
     );
   }
 
+  if (importedStewards.length > 0) {
+    return (
+      <div className="container mx-auto p-6">
+        <MultipleStewardsForm
+          stewards={importedStewards}
+          onSuccess={handleImportSuccess}
+          onCancel={handleImportCancel}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Community Stewards
-          </h1>
-          <p className="text-muted-foreground">
-            Manage community stewardship certificates and evaluations
-          </p>
+        <div className="flex items-center gap-4">
+          <Link href={DASHBOARD_ROUTES.root}>
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Community Stewards
+            </h1>
+            <p className="text-muted-foreground">
+              Manage community stewardship certificates and evaluations
+            </p>
+          </div>
         </div>
-        <Link href={DASHBOARD_ROUTES.createSteward}>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add New Steward
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowImport(true)}
+            disabled={isImporting}
+          >
+            {isImporting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Importing...
+              </>
+            ) : (
+              <>
+                <Upload className="h-4 w-4 mr-2" />
+                Import from Excel
+              </>
+            )}
           </Button>
-        </Link>
+          <Link href={DASHBOARD_ROUTES.createSteward}>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Steward
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      {/* Import Dialog */}
+      {showImport && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Import Stewards from Excel/CSV</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Upload an Excel or CSV file containing steward evaluation data to
+              automatically create stewards with their evaluations.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleImport(file);
+                    }
+                  }}
+                  className="hidden"
+                  id="steward-file-upload"
+                />
+                <label
+                  htmlFor="steward-file-upload"
+                  className="cursor-pointer flex flex-col items-center"
+                >
+                  <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-600">
+                    Click to upload Excel or CSV file
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Supports .xlsx, .xls, .csv formats
+                  </p>
+                </label>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowImport(false)}
+                  disabled={isImporting}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

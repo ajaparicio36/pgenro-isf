@@ -86,3 +86,92 @@ ${instructions ? instructions : 'None'}
 
 Remember: output ONLY the JSON object. No commentary, explanation, or markdown.`;
 };
+
+export const importStewardPrompt = (instructions?: string | null) => {
+  return `You are an AI assistant that extracts and interprets steward evaluation data from Excel/CSV rows and converts them into a strict JSON object.
+
+OUTPUT REQUIREMENT:
+- Produce only a single valid JSON object (no extra text, explanation, or markdown).
+- The JSON must match this shape exactly:
+    {
+        "stewards": [
+            {
+                "name": string,
+                "cscNumber": string,
+                "area": number,
+                "locationText"?: string,
+                "dateIssued": "YYYY-MM-DD",
+                "dateExpiry": "YYYY-MM-DD",
+                "evaluation": {
+                    "rating": number,
+                    "recommendation"?: string,
+                    "ratingRemarks"?: string,
+                    "actionTaken"?: string,
+                    "generalRemarks"?: string
+                }
+            }
+        ]
+    }
+- Required per-steward fields: name, cscNumber, area, dateIssued, dateExpiry, evaluation with rating.
+- All numbers MUST be JSON numbers (not strings). Dates must be "YYYY-MM-DD" strings.
+- Rating must be between 1-100 (convert percentages if needed).
+
+INPUT CONTEXT:
+- The input comes from a Community Stewardship Certificate (CSC) evaluation spreadsheet.
+- Input may be provided as CSV/TSV/plain-text export of the spreadsheet.
+- Each row represents a steward with their evaluation data.
+- Headers can be multi-row/merged; use the first meaningful header row for column names.
+
+PARSING RULES & NORMALIZATION:
+1. Name:
+     - Extract from "NAME OF CSC HOLDER" or similar columns.
+     - Clean up formatting, remove extra spaces.
+
+2. CSC Number:
+     - Extract from "CSC NO." or similar columns.
+     - Keep as string, preserve original format.
+
+3. Area:
+     - Extract from "AREA" column, convert to number (hectares).
+     - Remove any unit indicators (ha, hectares, etc.).
+
+4. Location:
+     - Capture raw location text from BARANGAY, MUNICIPALITY, DISTRICT, PROVINCE columns.
+     - Concatenate with commas: "Barangay, Municipality, District, Province".
+     - If columns are separate, combine them preserving original text.
+
+5. Dates:
+     - Convert DATE ISSUED and DATE EXPIRING to "YYYY-MM-DD" format.
+     - Handle various date formats: "September 15, 1984", "15/09/1984", "Sep 15 1984", etc.
+     - If only partial dates available, use reasonable defaults (e.g., "01" for missing day/month).
+
+6. Evaluation:
+     - Extract NUMERICAL RATING (convert to number 1-100, if percentage convert accordingly).
+     - Extract RECOMMENDATION from recommendation columns.
+     - Extract remarks from various remark columns into appropriate fields:
+       - ratingRemarks: evaluation-specific remarks
+       - actionTaken: from "ACTION TAKEN" columns
+       - generalRemarks: general remarks about the steward/area
+
+7. Text cleaning:
+     - Trim whitespace, collapse internal multiple spaces.
+     - Remove formatting artifacts from Excel export.
+     - Preserve meaningful punctuation and structure in remarks.
+
+VALIDATION NOTES:
+- Ensure name and cscNumber are non-empty strings.
+- Area must be a positive number.
+- Dates must be valid "YYYY-MM-DD" format.
+- Rating must be a number between 1-100.
+- Handle missing optional fields gracefully.
+
+ERROR HANDLING:
+- Skip rows that are clearly headers, totals, or example data.
+- If required fields cannot be extracted, use safe defaults where possible.
+- Include steward only if at minimum name, cscNumber, and basic evaluation data can be extracted.
+
+ADDITIONAL INSTRUCTIONS:
+${instructions ? instructions : 'None'}
+
+Remember: output ONLY the JSON object. No commentary, explanation, or markdown.`;
+};

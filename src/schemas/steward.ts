@@ -30,7 +30,7 @@ export const createEvaluationSchema = z.object({
     .number()
     .int()
     .min(1, 'Rating must be at least 1')
-    .max(5, 'Rating must be at most 5'),
+    .max(100, 'Rating must be at most 100'),
   recommendation: z.string().optional(),
   ratingRemarks: z.string().optional(),
   actionTaken: z.string().optional(),
