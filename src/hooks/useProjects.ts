@@ -16,9 +16,9 @@ const fetcher = async (url: string) => {
   return response.json();
 };
 
-export function useProjects() {
+export function useProjects(page: number = 1, limit: number = 10) {
   const { data, error, isLoading, mutate } = useSWR<ProjectListResponse>(
-    '/api/project',
+    `/api/project?page=${page}&limit=${limit}`,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -28,6 +28,9 @@ export function useProjects() {
 
   return {
     projects: data?.data || [],
+    totalPages: data?.totalPages || 1,
+    totalProjects: data?.totalProjects || 0,
+    currentPage: page,
     isLoading,
     error,
     mutate,

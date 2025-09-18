@@ -14,6 +14,8 @@ import {
   Package,
   Edit,
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -30,11 +32,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import ImportProjectsDialog from '@/components/projects/ImportProjectsDialog';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 
 const ProjectsPage = () => {
-  const { projects, isLoading, error, mutate } = useProjects();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const { projects, totalPages, totalProjects, isLoading, error, mutate } =
+    useProjects(currentPage, pageSize);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const router = useRouter();
 
@@ -79,6 +91,15 @@ const ProjectsPage = () => {
     mutate(); // Refresh the projects list
   };
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (size: string) => {
+    setPageSize(Number(size));
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-6">
@@ -120,12 +141,12 @@ const ProjectsPage = () => {
         </Link>
       </div>
 
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">Projects</h1>
           <p className="text-muted-foreground">Manage your project portfolio</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <ImportProjectsDialog onImportSuccess={handleImportSuccess} />
           <Link href={DASHBOARD_ROUTES.forms}>
             <Button>
@@ -153,116 +174,224 @@ const ProjectsPage = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
-            <Card
-              key={project.id}
-              className="hover:shadow-lg transition-shadow"
-            >
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="space-y-2">
-                    <CardTitle className="text-lg">{project.title}</CardTitle>
-                    {project.projectCode && (
-                      <p className="text-sm text-muted-foreground">
-                        Code: {project.projectCode}
-                      </p>
-                    )}
-                  </div>
-                  <Badge className={getStatusColor(project.status)}>
-                    {project.status}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>{project.startDate}</span>
-                    {project.endDate && <span> - {project.endDate}</span>}
-                  </div>
+        <div className="space-y-4">
+          {/* Results summary and page size selector */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <p className="text-sm text-muted-foreground">
+              Showing {(currentPage - 1) * pageSize + 1}-
+              {Math.min(currentPage * pageSize, totalProjects)} of{' '}
+              {totalProjects} projects
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Show:</span>
+              <Select
+                value={pageSize.toString()}
+                onValueChange={handlePageSizeChange}
+              >
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-                  <div className="text-sm text-muted-foreground">
-                    <span className="font-medium">Location:</span>{' '}
-                    {project.barangay.name},{' '}
-                    {project.barangay.municipality.name}
-                  </div>
+          {/* Projects list */}
+          <div className="space-y-2">
+            {projects.map((project) => (
+              <Card
+                key={project.id}
+                className="hover:shadow-md transition-shadow"
+              >
+                <CardContent className="p-4">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-lg truncate">
+                              {project.title}
+                            </h3>
+                            <Badge
+                              className={`${getStatusColor(project.status)} text-xs`}
+                            >
+                              {project.status}
+                            </Badge>
+                          </div>
+                          {project.projectCode && (
+                            <p className="text-sm text-muted-foreground mb-1">
+                              {project.projectCode}
+                            </p>
+                          )}
+                          <p className="text-sm text-muted-foreground truncate">
+                            {project.barangay.name},{' '}
+                            {project.barangay.municipality.name}
+                          </p>
+                        </div>
 
-                  {project.totalProjectCost && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Package className="h-4 w-4" />
-                      <span>₱{project.totalProjectCost.toLocaleString()}</span>
+                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            <span className="hidden sm:inline">
+                              {project.startDate}
+                            </span>
+                            <span className="sm:hidden">
+                              {new Date(project.startDate).toLocaleDateString(
+                                'en-US',
+                                {
+                                  month: 'short',
+                                  day: 'numeric',
+                                }
+                              )}
+                            </span>
+                          </div>
+                          {project.totalProjectCost && (
+                            <div className="flex items-center gap-1">
+                              <DollarSign className="h-4 w-4" />
+                              <span>
+                                ₱
+                                {(project.totalProjectCost / 1000000).toFixed(
+                                  1
+                                )}
+                                M
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1">
+                            <Package className="h-4 w-4" />
+                            <span>{project._count.components}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  )}
 
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>{project._count.components} components</span>
-                    <span>{project._count.attachments} attachments</span>
-                  </div>
-
-                  <div className="text-xs text-muted-foreground">
-                    Created: {new Date(project.createdAt).toLocaleDateString()}
-                  </div>
-
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() =>
-                        router.push(
-                          `${DASHBOARD_ROUTES.projects}/${project.id}`
-                        )
-                      }
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      View
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        router.push(
-                          `${DASHBOARD_ROUTES.projects}/${project.id}/edit`
-                        )
-                      }
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={deletingId === project.id}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Project</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete "{project.title}"?
-                            This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => deleteProject(project.id)}
-                            className="bg-red-600 hover:bg-red-700"
+                    {/* Action buttons */}
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          router.push(
+                            `${DASHBOARD_ROUTES.projects}/${project.id}`
+                          )
+                        }
+                        className="h-8 w-8 p-0"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          router.push(
+                            `${DASHBOARD_ROUTES.projects}/${project.id}/edit`
+                          )
+                        }
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={deletingId === project.id}
+                            className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
                           >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{project.title}"?
+                              This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteProject(project.id)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4">
+              <div className="text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-1">Previous</span>
+                </Button>
+
+                {/* Page numbers */}
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={
+                          currentPage === pageNum ? 'default' : 'outline'
+                        }
+                        size="sm"
+                        onClick={() => handlePageChange(pageNum)}
+                        className="h-8 w-8 p-0"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <span className="hidden sm:inline mr-1">Next</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

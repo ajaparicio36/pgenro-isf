@@ -100,6 +100,9 @@ export interface ProjectListResponse {
       attachments: number;
     };
   }[];
+  totalPages: number;
+  totalProjects: number;
+  currentPage: number;
 }
 
 export interface MunicipalityResponse {
