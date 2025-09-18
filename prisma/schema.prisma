@@ -43,6 +43,7 @@ model Municipality {
   updatedAt DateTime @updatedAt
 
   barangays Barangay[]
+  Steward   Steward[]
 
   @@index([code])
 }
@@ -56,6 +57,7 @@ model Barangay {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   Project        Project[]
+  Steward        Steward[]
 
   @@unique([name, municipalityId])
   @@index([officialCode])
@@ -121,4 +123,34 @@ model Attachment {
   createdAt  DateTime @default(now())
 
   @@index([projectId])
+}
+
+model Steward {
+  id             String       @id @default(uuid())
+  name           String
+  dateIssued     DateTime     @db.Date
+  dateExpiry     DateTime     @db.Date
+  cscNumber      String       @unique
+  area           Float // in hectares
+  geojson        String? // GeoJSON data for spatial representation
+  barangay       Barangay     @relation(fields: [barangayId], references: [id], onDelete: Cascade)
+  barangayId     String
+  municipality   Municipality @relation(fields: [municipalityId], references: [id], onDelete: Cascade)
+  municipalityId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  Evaluation     Evaluation[]
+}
+
+model Evaluation {
+  id             String   @id @default(uuid())
+  rating         Int // 1 to 5
+  recommendation String? // optional feedback
+  ratingRemarks  String? // optional feedback
+  actionTaken    String? // optional feedback
+  generalRemarks String? // optional feedback
+  steward        Steward  @relation(fields: [stewardId], references: [id], onDelete: Cascade)
+  stewardId      String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

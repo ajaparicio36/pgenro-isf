@@ -139,10 +139,22 @@ const DashboardPage = () => {
               View Projects
             </Button>
           </Link>
+          <Link href={DASHBOARD_ROUTES.stewards}>
+            <Button variant="outline">
+              <FolderOpen className="h-4 w-4 mr-2" />
+              View Stewards
+            </Button>
+          </Link>
           <Link href={DASHBOARD_ROUTES.forms}>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
               Create Project
+            </Button>
+          </Link>
+          <Link href={DASHBOARD_ROUTES.createSteward}>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Steward
             </Button>
           </Link>
           <Button
