@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useProjects } from '@/hooks/useProjects';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +16,8 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
+  Search,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -41,14 +43,27 @@ import {
 } from '@/components/ui/select';
 import ImportProjectsDialog from '@/components/projects/ImportProjectsDialog';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
+import { Input } from '@/components/ui/input';
 
 const ProjectsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const { projects, totalPages, totalProjects, isLoading, error, mutate } =
-    useProjects(currentPage, pageSize);
+    useProjects(currentPage, pageSize, debouncedSearch);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const router = useRouter();
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1); // Reset to first page when searching
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const deleteProject = async (id: string) => {
     setDeletingId(id);
@@ -98,6 +113,14 @@ const ProjectsPage = () => {
   const handlePageSizeChange = (size: string) => {
     setPageSize(Number(size));
     setCurrentPage(1); // Reset to first page when changing page size
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
   };
 
   if (isLoading) {
@@ -157,20 +180,49 @@ const ProjectsPage = () => {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="relative">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search projects by title, code, or location..."
+            value={searchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="pl-10 pr-10"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearSearch}
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-gray-100"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+
       {projects.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No projects found</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {debouncedSearch ? 'No projects found' : 'No projects found'}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Get started by creating your first project
+              {debouncedSearch
+                ? `No projects match "${debouncedSearch}". Try adjusting your search.`
+                : 'Get started by creating your first project'}
             </p>
-            <Link href={DASHBOARD_ROUTES.forms}>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Project
-              </Button>
-            </Link>
+            {!debouncedSearch && (
+              <Link href={DASHBOARD_ROUTES.forms}>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Project
+                </Button>
+              </Link>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -178,9 +230,25 @@ const ProjectsPage = () => {
           {/* Results summary and page size selector */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <p className="text-sm text-muted-foreground">
-              Showing {(currentPage - 1) * pageSize + 1}-
-              {Math.min(currentPage * pageSize, totalProjects)} of{' '}
-              {totalProjects} projects
+              {debouncedSearch ? (
+                <>
+                  Found {totalProjects} project{totalProjects !== 1 ? 's' : ''}{' '}
+                  matching "{debouncedSearch}"
+                  {totalProjects > 0 && (
+                    <>
+                      {' '}
+                      (showing {(currentPage - 1) * pageSize + 1}-
+                      {Math.min(currentPage * pageSize, totalProjects)})
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  Showing {(currentPage - 1) * pageSize + 1}-
+                  {Math.min(currentPage * pageSize, totalProjects)} of{' '}
+                  {totalProjects} projects
+                </>
+              )}
             </p>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Show:</span>

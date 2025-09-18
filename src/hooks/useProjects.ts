@@ -16,9 +16,13 @@ const fetcher = async (url: string) => {
   return response.json();
 };
 
-export function useProjects(page: number = 1, limit: number = 10) {
+export function useProjects(
+  page: number = 1,
+  limit: number = 10,
+  search: string = ''
+) {
   const { data, error, isLoading, mutate } = useSWR<ProjectListResponse>(
-    `/api/project?page=${page}&limit=${limit}`,
+    `/api/project?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -26,15 +30,52 @@ export function useProjects(page: number = 1, limit: number = 10) {
     }
   );
 
-  return {
-    projects: data?.data || [],
-    totalPages: data?.totalPages || 1,
-    totalProjects: data?.totalProjects || 0,
-    currentPage: page,
-    isLoading,
-    error,
-    mutate,
-  };
+  // Temporary client-side pagination fallback if API doesn't support pagination
+  const allProjects = data?.data || [];
+  const hasApiPagination = data?.totalPages !== undefined;
+
+  if (hasApiPagination) {
+    // API handles pagination and search
+    return {
+      projects: allProjects,
+      totalPages: data?.totalPages || 1,
+      totalProjects: data?.totalProjects || 0,
+      currentPage: page,
+      isLoading,
+      error,
+      mutate,
+    };
+  } else {
+    // Client-side pagination and search fallback
+    let filteredProjects = allProjects;
+
+    if (search.trim()) {
+      const searchLower = search.toLowerCase();
+      filteredProjects = allProjects.filter(
+        (project) =>
+          project.title.toLowerCase().includes(searchLower) ||
+          (project.projectCode &&
+            project.projectCode.toLowerCase().includes(searchLower)) ||
+          project.barangay.name.toLowerCase().includes(searchLower) ||
+          project.barangay.municipality.name.toLowerCase().includes(searchLower)
+      );
+    }
+
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedProjects = filteredProjects.slice(startIndex, endIndex);
+    const totalPages = Math.ceil(filteredProjects.length / limit);
+
+    return {
+      projects: paginatedProjects,
+      totalPages,
+      totalProjects: filteredProjects.length,
+      currentPage: page,
+      isLoading,
+      error,
+      mutate,
+    };
+  }
 }
 
 export function useProject(id: string) {
