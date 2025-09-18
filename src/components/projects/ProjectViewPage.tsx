@@ -176,8 +176,8 @@ const ProjectViewPage = ({ projectId }: ProjectViewPageProps) => {
             Back to Projects
           </Button>
           <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col md:flex-row items-center justify-between">
+              <div className="flex flex-col md:flex-row items-center gap-4">
                 <h1 className="text-3xl font-bold">{project.title}</h1>
                 <Badge className={getStatusColor(project.status)}>
                   {project.status}
