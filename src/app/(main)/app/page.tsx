@@ -6,7 +6,10 @@ import { useHeatmap } from '@/hooks/useHeatmap';
 import HeatmapFilters from '@/components/heatmap/HeatmapFilters';
 import HeatmapLegend from '@/components/heatmap/HeatmapLegend';
 import MapComponent from '@/components/map/MapComponent';
+import GenerateReportDialog from '@/components/reports/GenerateReportDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { FileText } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 const DashboardPage = () => {
@@ -31,6 +34,12 @@ const DashboardPage = () => {
             Visualize project distribution and intensity across barangays
           </p>
         </div>
+        <GenerateReportDialog>
+          <Button>
+            <FileText className="h-4 w-4 mr-2" />
+            Generate Report
+          </Button>
+        </GenerateReportDialog>
       </div>
 
       {error && (
