@@ -13,10 +13,11 @@ const evaluationSchema = z.object({
 
 export const POST = async (
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) => {
   try {
     const supabase = await createClient();
+    const { id } = await params;
     const {
       data: { user },
       error: authError,
@@ -29,7 +30,7 @@ export const POST = async (
       );
     }
 
-    const stewardId = params.id;
+    const stewardId = id;
     const body = await request.json();
     const validatedData = evaluationSchema.parse(body);
 
