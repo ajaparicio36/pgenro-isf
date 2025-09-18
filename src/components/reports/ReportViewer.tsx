@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { ReportData } from '@/schemas/report';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,7 @@ import {
   DollarSign,
   MapPin,
   Calendar,
+  Loader2,
 } from 'lucide-react';
 import {
   BarChart,
@@ -33,6 +34,7 @@ import {
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { toast } from 'sonner';
+import { ChartExportManager } from '@/utils/chartExport';
 
 interface ReportViewerProps {
   reportData: ReportData;
@@ -44,116 +46,569 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 const ReportViewer = ({ reportData, onBack, onClose }: ReportViewerProps) => {
   const reportRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const exportToPDF = async (includeAI = false) => {
-    if (!reportRef.current) return;
+    if (!reportRef.current) {
+      toast.error('Report content not found');
+      return;
+    }
+
+    setIsExporting(true);
+    console.log('Starting PDF export...');
 
     try {
-      toast.loading('Generating PDF...');
+      toast.loading('Preparing export...', { id: 'pdf-export' });
+
+      // Import jsPDF dynamically to avoid SSR issues
+      const jsPDF = (await import('jspdf')).default;
 
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 20;
+      const margin = 15;
+      let yPosition = margin;
 
-      // Add title
-      pdf.setFontSize(20);
-      pdf.text('Project Report', margin, margin + 10);
-
-      // Add summary
-      pdf.setFontSize(12);
-      let yPosition = margin + 30;
-
-      pdf.text('Summary Statistics', margin, yPosition);
-      yPosition += 10;
-
-      pdf.text(
-        `Total Projects: ${reportData.summary.totalProjects}`,
-        margin,
-        yPosition
-      );
-      yPosition += 6;
-      pdf.text(
-        `Total Cost: ₱${reportData.summary.totalCost.toLocaleString()}`,
-        margin,
-        yPosition
-      );
-      yPosition += 6;
-      pdf.text(
-        `Total Area: ${reportData.summary.totalAreaDeveloped.toFixed(2)} hectares`,
-        margin,
-        yPosition
-      );
-      yPosition += 6;
-      pdf.text(
-        `Average Cost: ₱${reportData.summary.averageProjectCost.toLocaleString()}`,
-        margin,
-        yPosition
-      );
+      // Add header
+      pdf.setFontSize(24);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('Project Report', margin, yPosition);
       yPosition += 15;
 
-      // Capture charts
+      // Add generation date
+      pdf.setFontSize(10);
+      pdf.setTextColor(128, 128, 128);
+      pdf.text(
+        `Generated on ${new Date().toLocaleString()}`,
+        margin,
+        yPosition
+      );
+      yPosition += 10;
+
+      // Executive Summary
+      pdf.setFontSize(16);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('Executive Summary', margin, yPosition);
+      yPosition += 10;
+
+      pdf.setFontSize(11);
+      const summaryItems = [
+        `Total Projects: ${reportData.summary.totalProjects}`,
+        `Total Cost: ₱${reportData.summary.totalCost.toLocaleString()}`,
+        `Total Area: ${reportData.summary.totalAreaDeveloped.toFixed(2)} hectares`,
+        `Average Cost: ₱${reportData.summary.averageProjectCost.toLocaleString()}`,
+      ];
+
+      summaryItems.forEach((item) => {
+        pdf.text(item, margin + 5, yPosition);
+        yPosition += 6;
+      });
+      yPosition += 15;
+
+      // Capture charts using SVG method
       const chartElements = reportRef.current.querySelectorAll('[data-chart]');
+      console.log(`Found ${chartElements.length} charts to capture`);
 
       for (let i = 0; i < chartElements.length; i++) {
-        const element = chartElements[i] as HTMLElement;
+        const chartContainer = chartElements[i] as HTMLElement;
+        const chartTitle =
+          chartContainer.getAttribute('data-chart-title') || `Chart ${i + 1}`;
 
-        if (yPosition > pageHeight - 100) {
+        console.log(`Capturing chart ${i + 1}: ${chartTitle}`);
+
+        // Check if we need a new page
+        if (yPosition > pageHeight - 120) {
           pdf.addPage();
           yPosition = margin;
         }
 
+        // Add chart title
+        pdf.setFontSize(14);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(chartTitle, margin, yPosition);
+        yPosition += 10;
+
         try {
-          const canvas = await html2canvas(element, {
-            scale: 2,
-            logging: false,
-            useCORS: true,
-          });
+          // Wait for chart to render completely
+          await new Promise((resolve) => setTimeout(resolve, 1000));
 
-          const imgData = canvas.toDataURL('image/png');
-          const imgWidth = pageWidth - margin * 2;
-          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          // Use SVG capture method exclusively
+          const svgElement = chartContainer.querySelector('svg');
+          if (svgElement) {
+            const imageData = await captureSVGForReportPDF(svgElement);
+            const imgWidth = pageWidth - margin * 2;
+            const imgHeight = Math.min(imgWidth * 0.6, 120);
 
-          pdf.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
-          yPosition += imgHeight + 15;
+            pdf.addImage(
+              imageData,
+              'PNG',
+              margin,
+              yPosition,
+              imgWidth,
+              imgHeight
+            );
+            yPosition += imgHeight + 15;
+            console.log(`Chart ${i + 1} added to PDF successfully`);
+          } else {
+            console.warn(`Chart ${i + 1} has no SVG element`);
+            pdf.setFontSize(10);
+            pdf.setTextColor(255, 0, 0);
+            pdf.text(
+              `[Chart capture failed: No SVG found - ${chartTitle}]`,
+              margin,
+              yPosition
+            );
+            yPosition += 15;
+          }
         } catch (error) {
-          console.warn('Failed to capture chart:', error);
+          console.error(`Failed to capture chart "${chartTitle}":`, error);
+          pdf.setFontSize(10);
+          pdf.setTextColor(255, 0, 0);
+          pdf.text(`[Chart export failed: ${chartTitle}]`, margin, yPosition);
+          yPosition += 15;
         }
       }
 
       // Add AI analysis if requested
       if (includeAI && reportData.aiAnalysis) {
+        console.log('Adding AI analysis...');
         pdf.addPage();
         yPosition = margin;
 
         pdf.setFontSize(16);
-        pdf.text('AI Analysis', margin, yPosition);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text('AI Analysis & Insights', margin, yPosition);
         yPosition += 15;
 
         pdf.setFontSize(10);
+        pdf.setTextColor(0, 0, 0);
+
+        // Clean up the analysis text
+        const cleanAnalysis = reportData.aiAnalysis
+          .replace(/<[^>]*>/g, '') // Remove HTML tags
+          .replace(/\*\*(.*?)\*\*/g, '$1') // Remove markdown bold
+          .replace(/\*(.*?)\*/g, '$1'); // Remove markdown italic
+
         const splitText = pdf.splitTextToSize(
-          reportData.aiAnalysis,
+          cleanAnalysis,
           pageWidth - margin * 2
         );
 
-        for (const line of splitText) {
+        splitText.forEach((line: string) => {
           if (yPosition > pageHeight - margin) {
             pdf.addPage();
             yPosition = margin;
           }
           pdf.text(line, margin, yPosition);
           yPosition += 5;
+        });
+      }
+
+      console.log('Generating PDF file...');
+      toast.loading('Generating file...', { id: 'pdf-export' });
+
+      // Generate and save the PDF
+      const fileName = `project-report-${new Date().toISOString().split('T')[0]}.pdf`;
+
+      // Try different save methods for better compatibility
+      try {
+        pdf.save(fileName);
+        console.log('PDF saved successfully');
+      } catch (saveError) {
+        console.error('Save error:', saveError);
+
+        // Fallback: create blob and download manually
+        const pdfBlob = pdf.output('blob');
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        console.log('PDF saved using fallback method');
+      }
+
+      toast.dismiss('pdf-export');
+      toast.success('PDF exported successfully!');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast.dismiss('pdf-export');
+
+      // Provide more specific error message
+      let errorMessage = 'Failed to export PDF. ';
+      if (error instanceof Error) {
+        if (error.message.includes('SVG')) {
+          errorMessage +=
+            'Chart SVG conversion failed. Try refreshing the page.';
+        } else if (error.message.includes('jsPDF')) {
+          errorMessage += 'PDF generation failed. Try a different browser.';
+        } else {
+          errorMessage += error.message;
+        }
+      } else {
+        errorMessage += 'Unknown error occurred.';
+      }
+
+      toast.error(errorMessage);
+    } finally {
+      setIsExporting(false);
+      console.log('PDF export process completed');
+    }
+  };
+
+  const exportComprehensivePDF = async () => {
+    if (!reportRef.current) {
+      toast.error('Report content not found');
+      return;
+    }
+
+    setIsExporting(true);
+    console.log('Starting comprehensive PDF export...');
+
+    try {
+      toast.loading('Preparing comprehensive analysis...', {
+        id: 'comprehensive-export',
+      });
+
+      const jsPDF = (await import('jspdf')).default;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      let yPosition = margin;
+
+      // Add header
+      pdf.setFontSize(24);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('Comprehensive Project Analysis Report', margin, yPosition);
+      yPosition += 15;
+
+      // Add generation date and summary
+      pdf.setFontSize(10);
+      pdf.setTextColor(128, 128, 128);
+      pdf.text(
+        `Generated on ${new Date().toLocaleString()}`,
+        margin,
+        yPosition
+      );
+      yPosition += 10;
+
+      // Executive Summary
+      pdf.setFontSize(16);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('Executive Summary', margin, yPosition);
+      yPosition += 10;
+
+      pdf.setFontSize(11);
+      const summaryItems = [
+        `Total Projects: ${reportData.summary.totalProjects || 0}`,
+        `Total Cost: ₱${(reportData.summary.totalCost || 0).toLocaleString()}`,
+        `Total Area: ${(reportData.summary.totalAreaDeveloped || 0).toFixed(2)} hectares`,
+        `Average Cost: ₱${(reportData.summary.averageProjectCost || 0).toLocaleString()}`,
+      ];
+
+      summaryItems.forEach((item) => {
+        pdf.text(item, margin + 5, yPosition);
+        yPosition += 6;
+      });
+      yPosition += 15;
+
+      // Define all available chart data for comprehensive analysis
+      const allChartData = [
+        {
+          title: 'Projects by Municipality',
+          data: reportData.municipalityData || [],
+          type: 'bar' as const,
+          dataType: 'projects_by_municipality',
+        },
+        {
+          title: 'Projects Over Time',
+          data: reportData.yearlyData || [],
+          type: 'line' as const,
+          dataType: 'projects_by_year',
+        },
+        {
+          title: 'Project Status Distribution',
+          data: reportData.statusData || [],
+          type: 'pie' as const,
+          dataType: 'status_distribution',
+        },
+        {
+          title: 'Total Cost by Municipality',
+          data: reportData.municipalityData || [],
+          type: 'bar' as const,
+          dataType: 'cost_by_municipality',
+        },
+      ].filter((chart) => chart.data.length > 0);
+
+      // Get all chart elements
+      const chartElements = reportRef.current.querySelectorAll('[data-chart]');
+
+      // Process each chart with insights using improved method
+      for (
+        let i = 0;
+        i < chartElements.length && i < allChartData.length;
+        i++
+      ) {
+        const chartContainer = chartElements[i] as HTMLElement;
+        const chartInfo = allChartData[i];
+
+        console.log(`Processing chart ${i + 1}: ${chartInfo.title}`);
+
+        // Check if we need a new page
+        if (yPosition > pageHeight - 150) {
+          pdf.addPage();
+          yPosition = margin;
+        }
+
+        // Add chart title
+        pdf.setFontSize(16);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(`${i + 1}. ${chartInfo.title}`, margin, yPosition);
+        yPosition += 12;
+
+        try {
+          // Generate insights
+          toast.loading(`Analyzing ${chartInfo.title.toLowerCase()}...`, {
+            id: 'comprehensive-export',
+          });
+
+          const insights = await ChartExportManager.generateChartInsights(
+            chartInfo.title,
+            chartInfo.type,
+            chartInfo.dataType,
+            chartInfo.data,
+            reportData.summary
+          );
+
+          // Capture chart using SVG method
+          toast.loading(`Capturing ${chartInfo.title.toLowerCase()}...`, {
+            id: 'comprehensive-export',
+          });
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+
+          const svgElement = chartContainer.querySelector('svg');
+          if (svgElement) {
+            const imageDataUrl = await captureSVGForReportPDF(svgElement);
+            const imgWidth = pageWidth - margin * 2;
+            const imgHeight = Math.min(imgWidth * 0.6, 120);
+
+            pdf.addImage(
+              imageDataUrl,
+              'PNG',
+              margin,
+              yPosition,
+              imgWidth,
+              imgHeight
+            );
+            yPosition += imgHeight + 10;
+          } else {
+            pdf.setFontSize(10);
+            pdf.setTextColor(255, 0, 0);
+            pdf.text(
+              `[No SVG chart found: ${chartInfo.title}]`,
+              margin,
+              yPosition
+            );
+            yPosition += 15;
+          }
+
+          // Add insights
+          pdf.setFontSize(12);
+          pdf.setTextColor(0, 0, 0);
+          pdf.text('Key Insights & Analysis:', margin, yPosition);
+          yPosition += 8;
+
+          pdf.setFontSize(10);
+          pdf.setTextColor(60, 60, 60);
+
+          const cleanInsights = insights
+            .replace(/\*\*(.*?)\*\*/g, '$1')
+            .replace(/\*(.*?)\*/g, '$1')
+            .replace(/^\d+\.\s*/gm, '• ');
+
+          const insightLines = pdf.splitTextToSize(
+            cleanInsights,
+            pageWidth - margin * 2
+          );
+
+          insightLines.forEach((line: string) => {
+            if (yPosition > pageHeight - margin * 2) {
+              pdf.addPage();
+              yPosition = margin;
+            }
+            pdf.text(line, margin, yPosition);
+            yPosition += 4;
+          });
+
+          yPosition += 10;
+        } catch (error) {
+          console.error(`Failed to process chart "${chartInfo.title}":`, error);
+          pdf.setFontSize(10);
+          pdf.setTextColor(255, 0, 0);
+          pdf.text(
+            `[Chart analysis failed: ${chartInfo.title}]`,
+            margin,
+            yPosition
+          );
+          yPosition += 15;
         }
       }
 
-      pdf.save('project-report.pdf');
-      toast.dismiss();
-      toast.success('PDF exported successfully');
+      // Add overall AI analysis if available
+      if (reportData.aiAnalysis) {
+        pdf.addPage();
+        yPosition = margin;
+
+        pdf.setFontSize(16);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text('Overall Strategic Analysis', margin, yPosition);
+        yPosition += 15;
+
+        pdf.setFontSize(10);
+        pdf.setTextColor(0, 0, 0);
+
+        const cleanAnalysis = reportData.aiAnalysis
+          .replace(/<[^>]*>/g, '')
+          .replace(/\*\*(.*?)\*\*/g, '$1')
+          .replace(/\*(.*?)\*/g, '$1');
+
+        const splitText = pdf.splitTextToSize(
+          cleanAnalysis,
+          pageWidth - margin * 2
+        );
+
+        splitText.forEach((line: string) => {
+          if (yPosition > pageHeight - margin) {
+            pdf.addPage();
+            yPosition = margin;
+          }
+          pdf.text(line, margin, yPosition);
+          yPosition += 5;
+        });
+      }
+
+      const fileName = `comprehensive-project-analysis-${new Date().toISOString().split('T')[0]}.pdf`;
+
+      try {
+        pdf.save(fileName);
+      } catch (saveError) {
+        const pdfBlob = pdf.output('blob');
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+
+      toast.dismiss('comprehensive-export');
+      toast.success(
+        `Comprehensive analysis report with ${allChartData.length} charts exported successfully!`
+      );
     } catch (error) {
-      toast.dismiss();
-      toast.error('Failed to export PDF');
-      console.error('PDF export error:', error);
+      console.error('Comprehensive PDF export error:', error);
+      toast.dismiss('comprehensive-export');
+      toast.error('Failed to export comprehensive report. Please try again.');
+    } finally {
+      setIsExporting(false);
     }
+  };
+
+  // Helper function for SVG capture in reports
+  const captureSVGForReportPDF = async (
+    svgElement: SVGElement
+  ): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const svgClone = svgElement.cloneNode(true) as SVGElement;
+      const rect = svgElement.getBoundingClientRect();
+      const width = rect.width || 400;
+      const height = rect.height || 300;
+
+      // Prepare SVG for PDF
+      svgClone.setAttribute('width', width.toString());
+      svgClone.setAttribute('height', height.toString());
+      svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      svgClone.style.backgroundColor = 'white';
+      svgClone.style.fontFamily = 'Arial, sans-serif';
+
+      // Fix colors - handle multiple problematic color formats
+      const elementsWithProblematicFill = svgClone.querySelectorAll(
+        '[fill*="lab("], [fill*="hsl("], [fill*="oklch("], [fill*="color("]'
+      );
+      elementsWithProblematicFill.forEach((el, index) => {
+        el.setAttribute('fill', COLORS[index % COLORS.length]);
+      });
+
+      const elementsWithProblematicStroke = svgClone.querySelectorAll(
+        '[stroke*="lab("], [stroke*="hsl("], [stroke*="oklch("], [stroke*="color("]'
+      );
+      elementsWithProblematicStroke.forEach((el, index) => {
+        el.setAttribute('stroke', COLORS[index % COLORS.length]);
+      });
+
+      // Fix text elements
+      const textElements = svgClone.querySelectorAll('text');
+      textElements.forEach((textEl) => {
+        if (
+          !textEl.getAttribute('fill') ||
+          textEl.getAttribute('fill')?.includes('lab(')
+        ) {
+          textEl.setAttribute('fill', '#000000');
+        }
+      });
+
+      const svgData = new XMLSerializer().serializeToString(svgClone);
+      const svgBlob = new Blob([svgData], {
+        type: 'image/svg+xml;charset=utf-8',
+      });
+      const svgUrl = URL.createObjectURL(svgBlob);
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        URL.revokeObjectURL(svgUrl);
+        reject(new Error('Canvas context not available for SVG conversion'));
+        return;
+      }
+
+      canvas.width = width * 2;
+      canvas.height = height * 2;
+      ctx.scale(2, 2);
+
+      const img = new Image();
+      img.onload = () => {
+        try {
+          ctx.fillStyle = 'white';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const imageData = canvas.toDataURL('image/png', 0.8);
+          URL.revokeObjectURL(svgUrl);
+          resolve(imageData);
+        } catch (drawError) {
+          URL.revokeObjectURL(svgUrl);
+          reject(new Error(`Canvas drawing failed: ${drawError}`));
+        }
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(svgUrl);
+        reject(new Error('Failed to load SVG image for PDF conversion'));
+      };
+
+      // Add timeout for SVG loading
+      setTimeout(() => {
+        URL.revokeObjectURL(svgUrl);
+        reject(new Error('SVG to image conversion timeout'));
+      }, 8000);
+
+      img.src = svgUrl;
+    });
   };
 
   return (
@@ -167,13 +622,56 @@ const ReportViewer = ({ reportData, onBack, onClose }: ReportViewerProps) => {
           <h2 className="text-2xl font-bold">Project Report</h2>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => exportToPDF(false)}>
-            <Download className="h-4 w-4 mr-2" />
-            Export Charts
+          <Button
+            variant="outline"
+            onClick={() => exportToPDF(false)}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Export Charts
+              </>
+            )}
           </Button>
-          <Button variant="outline" onClick={() => exportToPDF(true)}>
-            <FileText className="h-4 w-4 mr-2" />
-            Full Report
+          <Button
+            variant="outline"
+            onClick={() => exportToPDF(true)}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <FileText className="h-4 w-4 mr-2" />
+                Full Report
+              </>
+            )}
+          </Button>
+          <Button
+            variant="default"
+            onClick={exportComprehensivePDF}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Comprehensive Analysis
+              </>
+            )}
           </Button>
           <Button variant="outline" onClick={onClose}>
             Close
@@ -258,7 +756,11 @@ const ReportViewer = ({ reportData, onBack, onClose }: ReportViewerProps) => {
                     <CardTitle>Project Count by Municipality</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div data-chart className="h-80">
+                    <div
+                      data-chart
+                      data-chart-title="Project Count by Municipality"
+                      className="h-80"
+                    >
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={reportData.municipalityData}>
                           <CartesianGrid strokeDasharray="3 3" />
@@ -282,7 +784,11 @@ const ReportViewer = ({ reportData, onBack, onClose }: ReportViewerProps) => {
                     <CardTitle>Total Cost by Municipality</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div data-chart className="h-80">
+                    <div
+                      data-chart
+                      data-chart-title="Total Cost by Municipality"
+                      className="h-80"
+                    >
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={reportData.municipalityData}>
                           <CartesianGrid strokeDasharray="3 3" />
@@ -313,7 +819,11 @@ const ReportViewer = ({ reportData, onBack, onClose }: ReportViewerProps) => {
                   <CardTitle>Projects Over Time</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div data-chart className="h-80">
+                  <div
+                    data-chart
+                    data-chart-title="Projects Over Time"
+                    className="h-80"
+                  >
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={reportData.yearlyData}>
                         <CartesianGrid strokeDasharray="3 3" />
@@ -340,7 +850,11 @@ const ReportViewer = ({ reportData, onBack, onClose }: ReportViewerProps) => {
                     <CardTitle>Project Status Distribution</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div data-chart className="h-80">
+                    <div
+                      data-chart
+                      data-chart-title="Project Status Distribution"
+                      className="h-80"
+                    >
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie

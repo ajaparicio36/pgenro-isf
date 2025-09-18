@@ -10,7 +10,7 @@ import {
   Trash2,
   Eye,
   Calendar,
-  DollarSign,
+  Banknote,
   Package,
   Edit,
   ArrowLeft,
@@ -320,7 +320,7 @@ const ProjectsPage = () => {
                           </div>
                           {project.totalProjectCost && (
                             <div className="flex items-center gap-1">
-                              <DollarSign className="h-4 w-4" />
+                              <Banknote className="h-4 w-4" />
                               <span>
                                 ₱
                                 {(project.totalProjectCost / 1000000).toFixed(

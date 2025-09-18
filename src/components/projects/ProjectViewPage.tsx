@@ -10,13 +10,13 @@ import {
   ArrowLeft,
   Calendar,
   MapPin,
-  DollarSign,
   FileText,
   Paperclip,
   Loader2,
   AlertCircle,
   Download,
   Edit,
+  Banknote,
 } from 'lucide-react';
 import { DASHBOARD_ROUTES } from '@/lib/routes';
 import { Separator } from '@/components/ui/separator';
@@ -234,7 +234,7 @@ const ProjectViewPage = ({ projectId }: ProjectViewPageProps) => {
 
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <DollarSign className="h-4 w-4" />
+                  <Banknote className="h-4 w-4" />
                   Total Cost
                 </div>
                 <div className="font-medium">

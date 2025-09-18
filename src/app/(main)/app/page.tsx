@@ -18,14 +18,26 @@ import Link from 'next/link';
 import { DASHBOARD_ROUTES } from '@/lib/routes';
 import 'leaflet/dist/leaflet.css';
 
+interface ReportItem {
+  id: string;
+  data: any;
+  timestamp: Date;
+}
+
+interface ChartItem {
+  id: string;
+  data: any;
+  timestamp: Date;
+}
+
 const DashboardPage = () => {
   const [filters, setFilters] = useState<HeatmapFilterData>({
     category: HeatmapCategory.RECENTNESS,
   });
-  const [reportData, setReportData] = useState<any>(null);
-  const [chartData, setChartData] = useState<any>(null);
-  const reportRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<HTMLDivElement>(null);
+  const [reports, setReports] = useState<ReportItem[]>([]);
+  const [charts, setCharts] = useState<ChartItem[]>([]);
+  const reportRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const chartRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   const { heatmapData, metadata, isLoading, error } = useHeatmap(filters);
   const { isOpen, toggleChatbot } = useChatbot();
@@ -43,8 +55,6 @@ const DashboardPage = () => {
 
     // Handle custom queries
     if (chatbotFilters.customQuery) {
-      // For custom queries, we need to pass the custom parameters to the heatmap API
-      // This will be handled by the useHeatmap hook
       console.log('Applying custom heatmap query:', chatbotFilters.customQuery);
     }
 
@@ -52,11 +62,18 @@ const DashboardPage = () => {
   };
 
   const handleReportGenerated = (newReportData: any) => {
-    setReportData(newReportData);
+    const reportId = `report-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newReport: ReportItem = {
+      id: reportId,
+      data: newReportData,
+      timestamp: new Date(),
+    };
 
-    // Scroll to report section after a short delay
+    setReports((prev) => [...prev, newReport]);
+
+    // Scroll to new report section after a short delay
     setTimeout(() => {
-      reportRef.current?.scrollIntoView({
+      reportRefs.current[reportId]?.scrollIntoView({
         behavior: 'smooth',
         block: 'start',
       });
@@ -64,23 +81,42 @@ const DashboardPage = () => {
   };
 
   const handleChartGenerated = (newChartData: any) => {
-    setChartData(newChartData);
+    const chartId = `chart-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newChart: ChartItem = {
+      id: chartId,
+      data: newChartData,
+      timestamp: new Date(),
+    };
 
-    // Scroll to chart section after a short delay
+    setCharts((prev) => [...prev, newChart]);
+
+    // Scroll to new chart section after a short delay
     setTimeout(() => {
-      chartRef.current?.scrollIntoView({
+      chartRefs.current[chartId]?.scrollIntoView({
         behavior: 'smooth',
         block: 'start',
       });
     }, 100);
   };
 
-  const handleCloseReport = () => {
-    setReportData(null);
+  const handleCloseReport = (reportId: string) => {
+    setReports((prev) => prev.filter((report) => report.id !== reportId));
+    delete reportRefs.current[reportId];
   };
 
-  const handleCloseChart = () => {
-    setChartData(null);
+  const handleCloseChart = (chartId: string) => {
+    setCharts((prev) => prev.filter((chart) => chart.id !== chartId));
+    delete chartRefs.current[chartId];
+  };
+
+  const handleCloseAllReports = () => {
+    setReports([]);
+    reportRefs.current = {};
+  };
+
+  const handleCloseAllCharts = () => {
+    setCharts([]);
+    chartRefs.current = {};
   };
 
   return (
@@ -188,21 +224,72 @@ const DashboardPage = () => {
         </div>
       )}
 
-      {/* Inline Chart Viewer */}
-      {chartData && (
-        <div ref={chartRef}>
-          <ChartViewer chartData={chartData} onClose={handleCloseChart} />
-        </div>
+      {/* Multiple Chart Viewers */}
+      {charts.length > 0 && (
+        <>
+          {charts.length > 1 && (
+            <div className="flex items-center justify-between border-t pt-6">
+              <h2 className="text-xl font-semibold">
+                Generated Charts ({charts.length})
+              </h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCloseAllCharts}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Close All Charts
+              </Button>
+            </div>
+          )}
+          {charts.map((chart) => (
+            <div
+              key={chart.id}
+              ref={(el) => {
+                reportRefs.current[chart.id] = el;
+              }}
+            >
+              <ChartViewer
+                chartData={chart.data}
+                onClose={() => handleCloseChart(chart.id)}
+              />
+            </div>
+          ))}
+        </>
       )}
 
-      {/* Inline Report Viewer */}
-      {reportData && (
-        <div ref={reportRef}>
-          <InlineReportViewer
-            reportData={reportData}
-            onClose={handleCloseReport}
-          />
-        </div>
+      {/* Multiple Inline Report Viewers */}
+      {reports.length > 0 && (
+        <>
+          {reports.length > 1 && (
+            <div className="flex items-center justify-between border-t pt-6">
+              <h2 className="text-xl font-semibold">
+                Generated Reports ({reports.length})
+              </h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCloseAllReports}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Close All Reports
+              </Button>
+            </div>
+          )}
+          {reports.map((report) => (
+            <div
+              key={report.id}
+              ref={(el) => {
+                reportRefs.current[report.id] = el;
+              }}
+            >
+              <InlineReportViewer
+                reportData={report.data}
+                onClose={() => handleCloseReport(report.id)}
+              />
+            </div>
+          ))}
+        </>
       )}
 
       {/* Chatbot Components */}

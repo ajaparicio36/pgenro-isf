@@ -6,8 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Send, Loader2, Bot, User, Trash2, Minimize2 } from 'lucide-react';
+import {
+  Send,
+  Loader2,
+  Bot,
+  User,
+  Trash2,
+  Minimize2,
+  Download,
+} from 'lucide-react';
 import { useChatbot } from '@/hooks/useChatbot';
+import html2canvas from 'html2canvas';
+import { toast } from 'sonner';
 
 interface ChatMessage {
   id: string;
@@ -45,6 +55,7 @@ const ChatbotInterface = ({
 }: ChatbotInterfaceProps) => {
   const { messages, isLoading, sendMessage, clearMessages } = useChatbot();
   const [input, setInput] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -106,6 +117,86 @@ const ChatbotInterface = ({
     }).format(timestamp);
   };
 
+  const exportChatHistory = async () => {
+    const chatContainer = scrollAreaRef.current?.querySelector(
+      '[data-radix-scroll-area-viewport]'
+    );
+    if (!chatContainer) {
+      toast.error('Chat content not found');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      toast.loading('Exporting chat...', { id: 'chat-export' });
+
+      // Dynamic import to avoid SSR issues
+      const html2canvas = (await import('html2canvas')).default;
+
+      const canvas = await html2canvas(chatContainer as HTMLElement, {
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: chatContainer.scrollWidth,
+        height: chatContainer.scrollHeight,
+        ignoreElements: (element) => {
+          // Skip elements with unsupported CSS features
+          const style = getComputedStyle(element);
+          return (
+            style.color?.includes('lab(') ||
+            style.backgroundColor?.includes('lab(')
+          );
+        },
+        onclone: (clonedDoc) => {
+          // Clean up colors in cloned document
+          const clonedElements = clonedDoc.querySelectorAll('*');
+          clonedElements.forEach((el) => {
+            const htmlEl = el as HTMLElement;
+
+            // Replace lab colors with standard colors
+            if (htmlEl.style.color?.includes('lab(')) {
+              htmlEl.style.color = '#000000';
+            }
+            if (htmlEl.style.backgroundColor?.includes('lab(')) {
+              htmlEl.style.backgroundColor = '#ffffff';
+            }
+          });
+        },
+      });
+
+      // Convert to blob and create download
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = `chat-history-${new Date().toISOString().split('T')[0]}.png`;
+            link.href = url;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            toast.dismiss('chat-export');
+            toast.success('Chat history exported');
+          } else {
+            throw new Error('Failed to create image blob');
+          }
+        },
+        'image/png',
+        0.8
+      );
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.dismiss('chat-export');
+      toast.error('Failed to export chat. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <Card className="fixed bottom-24 right-6 w-80 md:w-96 h-[500px] z-40 shadow-2xl border-2 flex flex-col">
       <CardHeader className="pb-3 flex-shrink-0">
@@ -115,6 +206,21 @@ const ChatbotInterface = ({
             AI Assistant
           </CardTitle>
           <div className="flex items-center gap-1">
+            {messages.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={exportChatHistory}
+                disabled={isExporting}
+                title="Export chat history"
+              >
+                {isExporting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+              </Button>
+            )}
             <Button variant="ghost" size="sm" onClick={clearMessages}>
               <Trash2 className="h-4 w-4" />
             </Button>
