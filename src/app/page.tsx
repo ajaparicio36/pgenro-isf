@@ -1,12 +1,8 @@
-import Test from '@/components/home/Test';
+import HomePage from '@/components/home';
 import React from 'react';
 
-const HomePage = () => {
-  return (
-    <div>
-      <Test />
-    </div>
-  );
+const LandingPage = () => {
+  return <HomePage />;
 };
 
-export default HomePage;
+export default LandingPage;
