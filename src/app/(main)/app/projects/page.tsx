@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import ImportProjectsDialog from '@/components/projects/ImportProjectsDialog';
 
 const ProjectsPage = () => {
   const { projects, isLoading, error, mutate } = useProjects();
@@ -72,6 +73,10 @@ const ProjectsPage = () => {
     }
   };
 
+  const handleImportSuccess = () => {
+    mutate(); // Refresh the projects list
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-6">
@@ -101,12 +106,15 @@ const ProjectsPage = () => {
           <h1 className="text-3xl font-bold">Projects</h1>
           <p className="text-muted-foreground">Manage your project portfolio</p>
         </div>
-        <Link href={DASHBOARD_ROUTES.forms}>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Project
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <ImportProjectsDialog onImportSuccess={handleImportSuccess} />
+          <Link href={DASHBOARD_ROUTES.forms}>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Project
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {projects.length === 0 ? (

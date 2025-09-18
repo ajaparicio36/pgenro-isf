@@ -29,7 +29,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, Plus, Upload, X, Loader2 } from 'lucide-react';
+import { Trash2, Plus, Upload, X, Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface EditProjectFormProps {
@@ -50,6 +50,7 @@ const EditProjectForm = ({ project, onSuccess }: EditProjectFormProps) => {
     { name: string; url: string }[]
   >([]);
   const [uploading, setUploading] = useState(false);
+  const [barangaySearch, setBarangaySearch] = useState('');
 
   const form = useForm<EditProjectData>({
     resolver: zodResolver(editProjectSchema),
@@ -152,6 +153,28 @@ const EditProjectForm = ({ project, onSuccess }: EditProjectFormProps) => {
     }
   };
 
+  // Filter municipalities and barangays based on search
+  const filteredMunicipalities = municipalities
+    .filter((municipality) => {
+      if (!barangaySearch) return true;
+      const searchLower = barangaySearch.toLowerCase();
+      return (
+        municipality.name.toLowerCase().includes(searchLower) ||
+        municipality.barangays.some((barangay) =>
+          barangay.name.toLowerCase().includes(searchLower)
+        )
+      );
+    })
+    .map((municipality) => ({
+      ...municipality,
+      barangays: municipality.barangays.filter(
+        (barangay) =>
+          !barangaySearch ||
+          barangay.name.toLowerCase().includes(barangaySearch.toLowerCase()) ||
+          municipality.name.toLowerCase().includes(barangaySearch.toLowerCase())
+      ),
+    }));
+
   // Show loading state while data is being fetched
   if (componentsLoading || municipalitiesLoading) {
     return (
@@ -207,33 +230,53 @@ const EditProjectForm = ({ project, onSuccess }: EditProjectFormProps) => {
                 <FormItem>
                   <FormLabel>Project Location</FormLabel>
                   <FormControl>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select barangay location" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {municipalities.map((municipality) => (
-                          <React.Fragment key={municipality.id}>
-                            <SelectItem
-                              value={municipality.id}
-                              disabled
-                              className="font-semibold text-gray-900"
-                            >
-                              {municipality.name}
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search municipalities or barangays..."
+                          value={barangaySearch}
+                          onChange={(e) => setBarangaySearch(e.target.value)}
+                          className="pl-9"
+                        />
+                      </div>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select barangay location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filteredMunicipalities.length === 0 ? (
+                            <SelectItem value="no-results" disabled>
+                              No results found
                             </SelectItem>
-                            {municipality.barangays.map((barangay) => (
-                              <SelectItem
-                                key={barangay.id}
-                                value={barangay.id}
-                                className="pl-6"
-                              >
-                                {barangay.name}
-                              </SelectItem>
-                            ))}
-                          </React.Fragment>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          ) : (
+                            filteredMunicipalities.map((municipality) => (
+                              <React.Fragment key={municipality.id}>
+                                <SelectItem
+                                  value={municipality.id}
+                                  disabled
+                                  className="font-semibold text-gray-900"
+                                >
+                                  {municipality.name}
+                                </SelectItem>
+                                {municipality.barangays.map((barangay) => (
+                                  <SelectItem
+                                    key={barangay.id}
+                                    value={barangay.id}
+                                    className="pl-6"
+                                  >
+                                    {barangay.name}
+                                  </SelectItem>
+                                ))}
+                              </React.Fragment>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

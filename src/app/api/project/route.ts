@@ -68,19 +68,23 @@ export const POST = async (request: NextRequest) => {
 
     // Save component titles to components table for future reference
     for (const component of components) {
-      await prisma.component
-        .upsert({
-          where: {
-            id: `${component.componentTitle.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
-          },
-          update: {},
-          create: {
-            componentTitle: component.componentTitle,
-          },
-        })
-        .catch(() => {
-          // Ignore errors if component already exists
-        });
+      const existingComponent = await prisma.component.findFirst({
+        where: {
+          componentTitle: component.componentTitle,
+        },
+      });
+
+      if (!existingComponent) {
+        await prisma.component
+          .create({
+            data: {
+              componentTitle: component.componentTitle,
+            },
+          })
+          .catch(() => {
+            // Ignore errors if component creation fails
+          });
+      }
     }
 
     return createRouteSuccessResponse(201, project);
@@ -142,6 +146,7 @@ export const GET = async () => {
 
     return createRouteSuccessResponse(200, projects);
   } catch (e) {
+    console.log(e);
     const message =
       e instanceof Error ? e.message : 'An unexpected error occurred';
     return createRouteErrorResponse(500, message);

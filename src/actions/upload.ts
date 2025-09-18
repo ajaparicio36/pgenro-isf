@@ -18,3 +18,11 @@ export async function uploadFile(file: File) {
   }
   return { publicUrl: urlData.publicUrl };
 }
+
+export async function uploadFormData(formData: FormData) {
+  const file = formData.get('file') as File;
+  if (!file) {
+    throw new Error('No file provided');
+  }
+  return uploadFile(file);
+}
