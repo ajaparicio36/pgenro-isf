@@ -380,7 +380,7 @@ const LeafletMap = ({ heatmapData, isLoading }: LeafletMapProps) => {
     <div className="space-y-4">
       <Card>
         <CardContent className="p-0">
-          <div className="relative h-96 rounded-lg overflow-hidden">
+          <div className="relative h-[500px] md:h-[600px] lg:h-[650px] rounded-lg overflow-hidden">
             <MapContainer
               center={PANAY_BOUNDS.center}
               zoom={PANAY_BOUNDS.zoom}

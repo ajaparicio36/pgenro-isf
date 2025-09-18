@@ -8,7 +8,7 @@ import { HeatmapDataPoint } from '@/schemas/heatmap';
 const LeafletMap = dynamic(() => import('./LeafletMap'), {
   ssr: false,
   loading: () => (
-    <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center">
+    <div className="h-[500px] md:h-[600px] lg:h-[650px] bg-gray-100 rounded-lg flex items-center justify-center">
       <div className="text-center space-y-2">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
         <p className="text-muted-foreground">Loading map...</p>

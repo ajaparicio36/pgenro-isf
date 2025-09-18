@@ -114,7 +114,7 @@ const DashboardPage = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-1 space-y-4">
+        <div className="lg:col-span-1 space-y-4 lg:max-h-[650px] lg:overflow-y-auto">
           <HeatmapFilters
             filters={filters}
             onFiltersChange={handleFiltersChange}
