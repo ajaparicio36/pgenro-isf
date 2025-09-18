@@ -35,7 +35,7 @@ const CTASection = () => {
 
                 <p className="text-xl text-primary-foreground/90 max-w-2xl mx-auto">
                   Join leading government agencies and development organizations
-                  already using GeoTrazer to make data-driven decisions.
+                  already using GeoTraizer to make data-driven decisions.
                 </p>
               </div>
 
@@ -128,7 +128,7 @@ const CTASection = () => {
                     <div>
                       <div className="font-medium">Email Support</div>
                       <div className="text-sm text-muted-foreground">
-                        support@geotrazer.com
+                        support@geotraizer.com
                       </div>
                     </div>
                   </div>

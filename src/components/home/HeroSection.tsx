@@ -97,7 +97,7 @@ const HeroSection = () => {
                 <div className="relative bg-background/80 backdrop-blur p-8 rounded-2xl border shadow-2xl">
                   <Image
                     src="/logo.png"
-                    alt="GeoTrazer Logo"
+                    alt="GeoTraizer Logo"
                     width={300}
                     height={300}
                     className="w-full max-w-xs mx-auto"

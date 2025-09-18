@@ -137,8 +137,8 @@ const FeaturesSection = () => {
                 Measurable Impact
               </h3>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Organizations using GeoTrazer report significant improvements in
-                efficiency and decision-making speed.
+                Organizations using GeoTraizer report significant improvements
+                in efficiency and decision-making speed.
               </p>
             </div>
 

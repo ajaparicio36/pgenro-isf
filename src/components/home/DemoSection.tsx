@@ -80,7 +80,7 @@ const DemoSection = () => {
               Live Demo
             </Badge>
             <h2 className="text-3xl md:text-5xl font-bold">
-              See GeoTrazer in
+              See GeoTraizer in
               <span className="text-primary block">Action</span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
