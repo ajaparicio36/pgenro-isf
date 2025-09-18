@@ -30,6 +30,12 @@ export const GET = async (request: NextRequest) => {
     const startYear = searchParams.get('startYear');
     const endYear = searchParams.get('endYear');
 
+    // Parse custom query parameters
+    const customQuery = searchParams.get('customQuery');
+    const customCriteria = customQuery
+      ? JSON.parse(decodeURIComponent(customQuery))
+      : null;
+
     // Build optimized where clause for projects
     const projectWhere: any = {
       companyId: user.id,
@@ -42,7 +48,35 @@ export const GET = async (request: NextRequest) => {
       projectWhere.startDate = { lte: endYear };
     }
 
-    console.log('Loading heatmap data...');
+    // Add custom criteria filtering
+    if (customCriteria) {
+      if (customCriteria.minCost) {
+        projectWhere.totalProjectCost = { gte: customCriteria.minCost };
+      }
+      if (customCriteria.maxCost) {
+        projectWhere.totalProjectCost = {
+          ...projectWhere.totalProjectCost,
+          lte: customCriteria.maxCost,
+        };
+      }
+      if (customCriteria.minArea) {
+        projectWhere.totalAreaDeveloped = { gte: customCriteria.minArea };
+      }
+      if (customCriteria.maxArea) {
+        projectWhere.totalAreaDeveloped = {
+          ...projectWhere.totalAreaDeveloped,
+          lte: customCriteria.maxArea,
+        };
+      }
+      if (customCriteria.specificYears?.length) {
+        projectWhere.startDate = { in: customCriteria.specificYears };
+      }
+    }
+
+    console.log('Loading heatmap data with filters:', {
+      projectWhere,
+      customCriteria,
+    });
     const startTime = performance.now();
 
     // Optimized query with selective fields and proper indexing
@@ -91,7 +125,7 @@ export const GET = async (request: NextRequest) => {
       `Database query completed in ${(queryTime - startTime).toFixed(2)}ms`
     );
 
-    // Calculate heatmap data points with optimizations
+    // Calculate heatmap data points with custom filtering
     const heatmapData: HeatmapDataPoint[] = [];
     let globalMinYear = new Date().getFullYear();
     let globalMaxYear = 1900;
@@ -99,6 +133,20 @@ export const GET = async (request: NextRequest) => {
 
     for (const barangay of barangaysWithProjects) {
       const projects = barangay.Project;
+
+      // Apply custom project count filtering
+      if (
+        customCriteria?.minProjects &&
+        projects.length < customCriteria.minProjects
+      ) {
+        continue;
+      }
+      if (
+        customCriteria?.maxProjects &&
+        projects.length > customCriteria.maxProjects
+      ) {
+        continue;
+      }
 
       if (projects.length === 0) continue;
 
@@ -124,18 +172,53 @@ export const GET = async (request: NextRequest) => {
         totalCost += project.totalProjectCost || 0;
       }
 
-      // Determine intensity based on category
+      // Custom intensity calculation based on query type
       let categoryValue = 0;
-      switch (category) {
-        case HeatmapCategory.RECENTNESS:
-          categoryValue = recentnessScore;
-          break;
-        case HeatmapCategory.AREA_DEVELOPED:
-          categoryValue = totalAreaDeveloped;
-          break;
-        case HeatmapCategory.TOTAL_COST:
-          categoryValue = totalCost;
-          break;
+      if (customCriteria) {
+        switch (customCriteria.type) {
+          case 'cost_threshold':
+            categoryValue = totalCost;
+            break;
+          case 'project_count':
+            categoryValue = projects.length * 10; // Amplify for visualization
+            break;
+          case 'area_threshold':
+            categoryValue = totalAreaDeveloped;
+            break;
+          case 'development_intensity':
+            // Complex calculation combining multiple factors
+            const costScore = Math.min(totalCost / 1000000, 10); // Cap at 10M
+            const areaScore = Math.min(totalAreaDeveloped / 100, 10); // Cap at 100 hectares
+            const projectScore = Math.min(projects.length, 10); // Cap at 10 projects
+            categoryValue = (costScore + areaScore + projectScore) * 3.33; // Scale to 100
+            break;
+          default:
+            // Fall back to standard category calculation
+            switch (category) {
+              case HeatmapCategory.RECENTNESS:
+                categoryValue = recentnessScore;
+                break;
+              case HeatmapCategory.AREA_DEVELOPED:
+                categoryValue = totalAreaDeveloped;
+                break;
+              case HeatmapCategory.TOTAL_COST:
+                categoryValue = totalCost;
+                break;
+            }
+        }
+      } else {
+        // Standard category calculation
+        switch (category) {
+          case HeatmapCategory.RECENTNESS:
+            categoryValue = recentnessScore;
+            break;
+          case HeatmapCategory.AREA_DEVELOPED:
+            categoryValue = totalAreaDeveloped;
+            break;
+          case HeatmapCategory.TOTAL_COST:
+            categoryValue = totalCost;
+            break;
+        }
       }
 
       categoryValues.push(categoryValue);
@@ -181,6 +264,7 @@ export const GET = async (request: NextRequest) => {
       heatmapData,
       metadata: {
         category,
+        customQuery: customCriteria,
         totalBarangays: heatmapData.length,
         dateRange: {
           earliest: globalMinYear.toString(),
@@ -195,9 +279,11 @@ export const GET = async (request: NextRequest) => {
 
     const endTime = performance.now();
     console.log(
-      `Total heatmap processing completed in ${(endTime - startTime).toFixed(2)}ms`
+      `Custom heatmap processing completed in ${(endTime - startTime).toFixed(2)}ms`
     );
-    console.log(`Processed ${heatmapData.length} barangays with project data`);
+    console.log(
+      `Processed ${heatmapData.length} barangays with custom criteria`
+    );
 
     return createRouteSuccessResponse(200, response);
   } catch (e) {
