@@ -160,3 +160,58 @@
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
 }
+
+/* Optimized Leaflet styles for better performance */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  z-index: 1;
+  /* Enable hardware acceleration */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  padding: 0;
+}
+
+.custom-tooltip {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  font-size: 0.875rem;
+  max-width: 250px;
+  pointer-events: none; /* Improve performance by disabling pointer events */
+}
+
+.custom-tooltip::before {
+  border-top-color: #e5e7eb;
+}
+
+.leaflet-tooltip-top::before {
+  border-top-color: #e5e7eb;
+}
+
+/* Optimized controls */
+.leaflet-control-zoom {
+  z-index: 1000;
+}
+
+.leaflet-control-attribution {
+  z-index: 1000;
+  font-size: 0.75rem;
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+/* Improve rendering performance */
+.leaflet-zoom-anim .leaflet-zoom-animated {
+  will-change: transform;
+}
+
+/* Optimize tile loading */
+.leaflet-tile-container img {
+  image-rendering: optimizeSpeed;
+  image-rendering: -webkit-optimize-contrast;
+}
