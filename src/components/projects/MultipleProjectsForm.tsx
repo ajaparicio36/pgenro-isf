@@ -1,9 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { ComboBox } from '@/components/ui/combobox';
 import {
   Form,
@@ -26,6 +33,7 @@ import {
 import { toast } from 'sonner';
 import { useMunicipalities } from '@/hooks/useProjects';
 import { useBarangayMapping } from '@/hooks/useBarangayMapping';
+import { ProjectStatus, getStatusOptions } from '@/schemas/project';
 import { z } from 'zod';
 
 interface InterpretedProject {
@@ -36,6 +44,7 @@ interface InterpretedProject {
   totalAreaDeveloped?: number;
   description?: string;
   totalProjectCost?: number;
+  status?: ProjectStatus;
   locationText?: string;
   components: {
     componentTitle: string;
@@ -61,6 +70,7 @@ const multipleProjectsSchema = z.object({
       totalAreaDeveloped: z.number().min(0).optional(),
       description: z.string().optional(),
       totalProjectCost: z.number().min(0).optional(),
+      status: z.nativeEnum(ProjectStatus).default(ProjectStatus.PLANNED),
       barangayId: z.string().min(1, 'Barangay is required'),
       components: z
         .array(
@@ -94,16 +104,19 @@ const MultipleProjectsForm = ({
     [key: number]: 'pending' | 'creating' | 'success' | 'error';
   }>({});
 
+  // Define default values with proper typing
+  const defaultValues: MultipleProjectsFormData = {
+    projects: projects.map((project) => ({
+      ...project,
+      status: project.status || ProjectStatus.PLANNED,
+      barangayId: '',
+      totalAreaDeveloped: project.totalAreaDeveloped || undefined,
+      totalProjectCost: project.totalProjectCost || undefined,
+    })),
+  };
+
   const form = useForm<MultipleProjectsFormData>({
-    resolver: zodResolver(multipleProjectsSchema),
-    defaultValues: {
-      projects: projects.map((project) => ({
-        ...project,
-        barangayId: '',
-        totalAreaDeveloped: project.totalAreaDeveloped || undefined,
-        totalProjectCost: project.totalProjectCost || undefined,
-      })),
-    },
+    defaultValues,
   });
 
   const { fields } = useFieldArray({
@@ -132,7 +145,7 @@ const MultipleProjectsForm = ({
     }
   }, [municipalitiesLoading, municipalities, searchBarangay, form, projects]);
 
-  const onSubmit = async (data: MultipleProjectsFormData) => {
+  const onSubmit: SubmitHandler<MultipleProjectsFormData> = async (data) => {
     setIsSubmitting(true);
     const newCreatingStatus: {
       [key: number]: 'pending' | 'creating' | 'success' | 'error';
@@ -154,10 +167,14 @@ const MultipleProjectsForm = ({
       setCreatingStatus((prev) => ({ ...prev, [i]: 'creating' }));
 
       try {
+        // Validate the project data manually using Zod
+        const validatedProject =
+          multipleProjectsSchema.shape.projects.element.parse(project);
+
         const response = await fetch('/api/project', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(project),
+          body: JSON.stringify(validatedProject),
         });
 
         const result = await response.json();
@@ -439,6 +456,37 @@ const MultipleProjectsForm = ({
                               disabled={isSubmitting}
                               className="w-full"
                             />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name={`projects.${index}.status`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Project Status *</FormLabel>
+                          <FormControl>
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <SelectTrigger disabled={isSubmitting}>
+                                <SelectValue placeholder="Select project status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getStatusOptions().map((option) => (
+                                  <SelectItem
+                                    key={option.value}
+                                    value={option.value}
+                                  >
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </FormControl>
                           <FormMessage />
                         </FormItem>

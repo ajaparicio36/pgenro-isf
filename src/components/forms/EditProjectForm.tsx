@@ -7,6 +7,8 @@ import {
   editProjectSchema,
   EditProjectData,
   ProjectResponse,
+  ProjectStatus,
+  getStatusOptions,
 } from '@/schemas/project';
 import { useComponents, useMunicipalities } from '@/hooks/useProjects';
 import { uploadFile } from '@/actions/upload';
@@ -63,6 +65,7 @@ const EditProjectForm = ({ project, onSuccess }: EditProjectFormProps) => {
       totalAreaDeveloped: project.totalAreaDeveloped || undefined,
       description: project.description || '',
       totalProjectCost: project.totalProjectCost || undefined,
+      status: project.status as ProjectStatus,
       barangayId: project.barangay.id,
       components: project.components.map((comp) => ({
         componentTitle: comp.componentTitle,
@@ -227,6 +230,31 @@ const EditProjectForm = ({ project, onSuccess }: EditProjectFormProps) => {
                   <FormLabel>Project Code</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter project code" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Project Status *</FormLabel>
+                  <FormControl>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select project status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getStatusOptions().map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -1,5 +1,49 @@
 import { z } from 'zod';
 
+// Add ProjectStatus enum
+export enum ProjectStatus {
+  PLANNED = 'PLANNED',
+  ONGOING = 'ONGOING',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+}
+
+// Add utility function to get status labels
+export const getStatusLabel = (status: ProjectStatus): string => {
+  switch (status) {
+    case ProjectStatus.PLANNED:
+      return 'Planned';
+    case ProjectStatus.ONGOING:
+      return 'Ongoing';
+    case ProjectStatus.COMPLETED:
+      return 'Completed';
+    case ProjectStatus.CANCELLED:
+      return 'Cancelled';
+    default:
+      return status;
+  }
+};
+
+// Add utility function to get status options for Select component
+export const getStatusOptions = () => [
+  {
+    value: ProjectStatus.PLANNED,
+    label: getStatusLabel(ProjectStatus.PLANNED),
+  },
+  {
+    value: ProjectStatus.ONGOING,
+    label: getStatusLabel(ProjectStatus.ONGOING),
+  },
+  {
+    value: ProjectStatus.COMPLETED,
+    label: getStatusLabel(ProjectStatus.COMPLETED),
+  },
+  {
+    value: ProjectStatus.CANCELLED,
+    label: getStatusLabel(ProjectStatus.CANCELLED),
+  },
+];
+
 export const projectComponentSchema = z.object({
   componentTitle: z.string().min(1, 'Component title is required').max(255),
   componentDescription: z.string().optional(),
@@ -14,6 +58,7 @@ export const createProjectSchema = z.object({
   totalAreaDeveloped: z.number().min(0).optional(),
   description: z.string().optional(),
   totalProjectCost: z.number().min(0).optional(),
+  status: z.nativeEnum(ProjectStatus).default(ProjectStatus.PLANNED),
   barangayId: z.string().min(1, 'Barangay is required'),
   components: z
     .array(projectComponentSchema)
@@ -29,6 +74,7 @@ export const editProjectSchema = z.object({
   totalAreaDeveloped: z.number().min(0).optional(),
   description: z.string().optional(),
   totalProjectCost: z.number().min(0).optional(),
+  status: z.nativeEnum(ProjectStatus).optional(),
   barangayId: z.string().min(1, 'Barangay is required').optional(),
   components: z
     .array(projectComponentSchema)

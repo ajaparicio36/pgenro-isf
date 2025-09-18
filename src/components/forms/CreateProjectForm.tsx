@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   createProjectSchema,
   CreateProjectData,
   ProjectComponentData,
+  ProjectStatus,
+  getStatusOptions,
 } from '@/schemas/project';
 import { useComponents, useMunicipalities } from '@/hooks/useProjects';
 import { uploadFile } from '@/actions/upload';
@@ -51,22 +53,26 @@ const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
   >([]);
   const [uploading, setUploading] = useState(false);
 
+  // Define default values with proper typing
+  const defaultValues: CreateProjectData = {
+    title: '',
+    projectCode: '',
+    startDate: new Date().getFullYear().toString(),
+    endDate: '',
+    totalAreaDeveloped: undefined,
+    description: '',
+    totalProjectCost: undefined,
+    status: ProjectStatus.PLANNED,
+    barangayId: '',
+    components: [
+      { componentTitle: '', componentDescription: '', componentCost: 0 },
+    ],
+    attachmentUrls: [],
+  };
+
   const form = useForm<CreateProjectData>({
-    resolver: zodResolver(createProjectSchema),
-    defaultValues: {
-      title: '',
-      projectCode: '',
-      startDate: new Date().getFullYear().toString(),
-      endDate: '',
-      totalAreaDeveloped: undefined,
-      description: '',
-      totalProjectCost: undefined,
-      barangayId: '',
-      components: [
-        { componentTitle: '', componentDescription: '', componentCost: 0 },
-      ],
-      attachmentUrls: [],
-    },
+    defaultValues,
+    mode: 'onChange',
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -116,13 +122,16 @@ const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
     append({ componentTitle: '', componentDescription: '', componentCost: 0 });
   };
 
-  const onSubmit = async (data: CreateProjectData) => {
+  const onSubmit: SubmitHandler<CreateProjectData> = async (data) => {
     setIsSubmitting(true);
     try {
+      // Validate the data manually using Zod
+      const validatedData = createProjectSchema.parse(data);
+
       const response = await fetch('/api/project', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(validatedData),
       });
 
       const result = await response.json();
@@ -137,7 +146,11 @@ const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
         toast.error(result.message || 'Failed to create project');
       }
     } catch (error) {
-      toast.error('An error occurred while creating the project');
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error('An error occurred while creating the project');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -194,6 +207,31 @@ const CreateProjectForm = ({ onSuccess }: CreateProjectFormProps) => {
                   <FormLabel>Project Code</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter project code" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Project Status *</FormLabel>
+                  <FormControl>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select project status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getStatusOptions().map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

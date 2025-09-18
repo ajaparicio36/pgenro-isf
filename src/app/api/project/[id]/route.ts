@@ -79,9 +79,13 @@ export const GET = async (
   }
 };
 
-export const DELETE = async (request: NextRequest, { params }: Params) => {
+export const DELETE = async (
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) => {
   try {
     const supabase = await createClient();
+    const { id } = await params;
 
     const {
       data: { user },
@@ -94,7 +98,7 @@ export const DELETE = async (request: NextRequest, { params }: Params) => {
 
     const project = await prisma.project.findFirst({
       where: {
-        id: params.id,
+        id,
         companyId: user.id,
       },
     });
@@ -105,7 +109,7 @@ export const DELETE = async (request: NextRequest, { params }: Params) => {
 
     await prisma.project.delete({
       where: {
-        id: params.id,
+        id,
       },
     });
 
