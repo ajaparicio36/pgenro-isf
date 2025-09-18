@@ -99,6 +99,16 @@ export function useMunicipalities() {
     {
       revalidateOnFocus: false,
       dedupingInterval: 300000, // Cache for 5 minutes
+      shouldRetryOnError: true,
+      onError: (error) => {
+        console.error('Failed to load municipalities:', error);
+      },
+      onSuccess: (data) => {
+        console.log(
+          'Successfully loaded municipalities:',
+          data?.data?.length || 0
+        );
+      },
     }
   );
 

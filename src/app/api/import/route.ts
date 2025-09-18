@@ -153,7 +153,7 @@ export const POST = async (request: NextRequest) => {
     const fileContent = await file.text();
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-5-mini',
+      model: 'gpt-4o-mini', // Fixed model name
       messages: [
         { role: 'system', content: importPrompt(instructions) },
         { role: 'user', content: fileContent },
@@ -170,7 +170,7 @@ export const POST = async (request: NextRequest) => {
     });
 
     const functionCall = completion.choices[0].message.function_call;
-    console.log(functionCall);
+    console.log('OpenAI function call response:', functionCall);
 
     if (!functionCall || !functionCall.arguments) {
       return createRouteErrorResponse(
@@ -183,11 +183,13 @@ export const POST = async (request: NextRequest) => {
     try {
       interpretedData = JSON.parse(functionCall.arguments);
     } catch (parseError) {
+      console.error('Failed to parse AI response:', parseError);
       return createRouteErrorResponse(500, 'Failed to parse AI response JSON');
     }
 
     const validatedResponse = importResponseSchema.safeParse(interpretedData);
     if (!validatedResponse.success) {
+      console.error('Validation failed:', validatedResponse.error);
       return createRouteErrorResponse(
         400,
         'Invalid AI response structure: ' +
@@ -195,10 +197,14 @@ export const POST = async (request: NextRequest) => {
       );
     }
 
+    console.log(
+      'Successfully interpreted projects:',
+      validatedResponse.data.projects.length
+    );
     // Return interpreted projects without creating them
     return createRouteSuccessResponse(200, validatedResponse.data.projects);
   } catch (error) {
-    console.log(error);
+    console.error('Import API error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return createRouteErrorResponse(500, message);
   }

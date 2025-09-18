@@ -15,6 +15,7 @@ import {
   parseValidationIssues,
 } from '@/utils/responseHandler';
 import prisma from '@/utils/prisma';
+import { redirect } from 'next/navigation';
 
 export async function login(
   values: LoginData
@@ -84,3 +85,9 @@ export async function signup(
     message: 'Check your email for the login link!',
   }) as RegisterResponse;
 }
+
+export const logout = async () => {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect('/auth');
+};

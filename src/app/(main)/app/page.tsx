@@ -13,10 +13,11 @@ import InlineReportViewer from '@/components/reports/InlineReportViewer';
 import ChartViewer from '@/components/charts/ChartViewer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, X, FolderOpen, Plus } from 'lucide-react';
+import { MessageCircle, X, FolderOpen, Plus, DoorOpen } from 'lucide-react';
 import Link from 'next/link';
 import { DASHBOARD_ROUTES } from '@/lib/routes';
 import 'leaflet/dist/leaflet.css';
+import { logout } from '@/actions/auth';
 
 interface ReportItem {
   id: string;
@@ -151,6 +152,10 @@ const DashboardPage = () => {
           >
             <MessageCircle className="h-4 w-4 mr-2" />
             AI Assistant
+          </Button>
+          <Button variant="destructive" className="" onClick={logout}>
+            <DoorOpen className="h-4 w-4 mr-2" />
+            Logout
           </Button>
         </div>
       </div>

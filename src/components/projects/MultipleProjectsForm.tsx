@@ -1,18 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { ComboBox } from '@/components/ui/combobox';
 import {
   Form,
@@ -34,6 +25,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMunicipalities } from '@/hooks/useProjects';
+import { useBarangayMapping } from '@/hooks/useBarangayMapping';
 import { z } from 'zod';
 
 interface InterpretedProject {
@@ -91,8 +83,12 @@ const MultipleProjectsForm = ({
   onSuccess,
   onCancel,
 }: MultipleProjectsFormProps) => {
-  const { municipalities, isLoading: municipalitiesLoading } =
-    useMunicipalities();
+  const {
+    municipalities,
+    isLoading: municipalitiesLoading,
+    error: municipalitiesError,
+  } = useMunicipalities();
+  const { searchBarangay } = useBarangayMapping();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [creatingStatus, setCreatingStatus] = useState<{
     [key: number]: 'pending' | 'creating' | 'success' | 'error';
@@ -114,6 +110,27 @@ const MultipleProjectsForm = ({
     control: form.control,
     name: 'projects',
   });
+
+  // Auto-assign barangays based on location text when municipalities are loaded
+  useEffect(() => {
+    if (!municipalitiesLoading && municipalities.length > 0 && searchBarangay) {
+      console.log('Attempting to auto-assign barangays...');
+      const formValues = form.getValues();
+
+      formValues.projects.forEach((project, index) => {
+        if (!project.barangayId && projects[index].locationText) {
+          const matchedBarangay = searchBarangay(projects[index].locationText!);
+          if (matchedBarangay) {
+            console.log(
+              `Auto-assigned barangay for project ${index}:`,
+              matchedBarangay
+            );
+            form.setValue(`projects.${index}.barangayId`, matchedBarangay.id);
+          }
+        }
+      });
+    }
+  }, [municipalitiesLoading, municipalities, searchBarangay, form, projects]);
 
   const onSubmit = async (data: MultipleProjectsFormData) => {
     setIsSubmitting(true);
@@ -221,6 +238,34 @@ const MultipleProjectsForm = ({
     );
   }
 
+  if (municipalitiesError) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-center space-y-2">
+          <AlertCircle className="h-8 w-8 text-red-500 mx-auto" />
+          <p className="text-lg text-red-600">Failed to load municipalities</p>
+          <Button onClick={onCancel} variant="outline">
+            Cancel Import
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (municipalities.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-center space-y-2">
+          <AlertCircle className="h-8 w-8 text-yellow-500 mx-auto" />
+          <p className="text-lg text-yellow-600">No municipalities found</p>
+          <Button onClick={onCancel} variant="outline">
+            Cancel Import
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
@@ -241,6 +286,12 @@ const MultipleProjectsForm = ({
                 (sum, comp) => sum + comp.componentCost,
                 0
               );
+
+              // Check if barangay was auto-assigned
+              const currentBarangayId = form.watch(
+                `projects.${index}.barangayId`
+              );
+              const wasAutoAssigned = currentBarangayId && project.locationText;
 
               return (
                 <Card key={field.id} className="relative">
@@ -319,16 +370,47 @@ const MultipleProjectsForm = ({
                     </div>
 
                     {project.locationText && (
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div
+                        className={`p-4 border rounded-lg ${
+                          wasAutoAssigned
+                            ? 'bg-green-50 border-green-200'
+                            : 'bg-blue-50 border-blue-200'
+                        }`}
+                      >
                         <div className="flex items-start gap-2">
-                          <MapPin className="h-4 w-4 mt-0.5 text-blue-600" />
+                          <MapPin
+                            className={`h-4 w-4 mt-0.5 ${
+                              wasAutoAssigned
+                                ? 'text-green-600'
+                                : 'text-blue-600'
+                            }`}
+                          />
                           <div>
-                            <p className="text-sm font-medium text-blue-900">
-                              Location from file:
+                            <p
+                              className={`text-sm font-medium ${
+                                wasAutoAssigned
+                                  ? 'text-green-900'
+                                  : 'text-blue-900'
+                              }`}
+                            >
+                              {wasAutoAssigned
+                                ? 'Auto-matched location:'
+                                : 'Location from file:'}
                             </p>
-                            <p className="text-sm text-blue-700">
+                            <p
+                              className={`text-sm ${
+                                wasAutoAssigned
+                                  ? 'text-green-700'
+                                  : 'text-blue-700'
+                              }`}
+                            >
                               {project.locationText}
                             </p>
+                            {wasAutoAssigned && (
+                              <p className="text-xs text-green-600 mt-1">
+                                ✓ Automatically assigned barangay
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -339,7 +421,14 @@ const MultipleProjectsForm = ({
                       name={`projects.${index}.barangayId`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Assign Barangay *</FormLabel>
+                          <FormLabel>
+                            Assign Barangay *
+                            {wasAutoAssigned && (
+                              <span className="text-green-600 text-sm ml-2">
+                                (Auto-assigned)
+                              </span>
+                            )}
+                          </FormLabel>
                           <FormControl>
                             <ComboBox
                               value={field.value}
@@ -405,10 +494,7 @@ const MultipleProjectsForm = ({
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting || municipalitiesLoading}
-            >
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
