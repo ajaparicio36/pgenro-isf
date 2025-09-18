@@ -1,2 +1,8 @@
-prisma/*
-public/*
+/prisma/*
+/public/*
+/src/generated/*
+node_modules/
+.next/
+out/
+build/
+dist/

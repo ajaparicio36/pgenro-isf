@@ -1,2 +1,29 @@
-src/components/ui/**
-prisma/**
+# UI Components
+
+src/components/ui/
+src/components/ui/\*_/_
+
+# Prisma generated files
+
+prisma/
+src/generated/
+src/generated/**/\*
+src/generated/prisma/
+src/generated/prisma/**/\*
+
+# Dependencies and build outputs
+
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# Specific problematic files
+
+src/generated/prisma/wasm.js
+src/generated/prisma/client.js
+src/generated/prisma/default.js
+src/generated/prisma/edge.js
+src/generated/prisma/index.js
+src/generated/prisma/query_engine_bg.js
