@@ -5,7 +5,15 @@ import { useProjects } from '@/hooks/useProjects';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Eye, Calendar, DollarSign, Package } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Eye,
+  Calendar,
+  DollarSign,
+  Package,
+  Edit,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -182,6 +190,17 @@ const ProjectsPage = () => {
                     >
                       <Eye className="h-4 w-4 mr-2" />
                       View
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        router.push(
+                          `${DASHBOARD_ROUTES.projects}/${project.id}/edit`
+                        )
+                      }
+                    >
+                      <Edit className="h-4 w-4" />
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>

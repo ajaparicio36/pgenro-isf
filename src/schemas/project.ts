@@ -21,7 +21,24 @@ export const createProjectSchema = z.object({
   attachmentUrls: z.array(z.string().url()).optional(),
 });
 
+export const editProjectSchema = z.object({
+  title: z.string().min(1, 'Project title is required').max(255).optional(),
+  projectCode: z.string().optional(),
+  startDate: z.string().min(4, 'Start date is required').optional(),
+  endDate: z.string().optional(),
+  totalAreaDeveloped: z.number().min(0).optional(),
+  description: z.string().optional(),
+  totalProjectCost: z.number().min(0).optional(),
+  barangayId: z.string().min(1, 'Barangay is required').optional(),
+  components: z
+    .array(projectComponentSchema)
+    .min(1, 'At least one component is required')
+    .optional(),
+  attachmentUrls: z.array(z.string().url()).optional(),
+});
+
 export type CreateProjectData = z.infer<typeof createProjectSchema>;
+export type EditProjectData = z.infer<typeof editProjectSchema>;
 export type ProjectComponentData = z.infer<typeof projectComponentSchema>;
 
 export interface ProjectResponse {
