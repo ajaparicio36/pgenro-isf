@@ -15,30 +15,28 @@ datasource db {
 }
 
 model Company {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   companyName String
-  createdAt   DateTime @default(now()) @db.Timestamptz
-  updatedAt   DateTime @updatedAt @db.Timestamptz
-  User        User[]
+  createdAt   DateTime  @default(now()) @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @db.Timestamptz
+  Project     Project[]
 }
 
-model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  password    String
-  firstName   String
-  lastName    String
-  company     Company  @relation(fields: [companyId], references: [id])
-  companyId   String
-  permissions String[]
-  createdAt   DateTime @default(now()) @db.Timestamptz
-  updatedAt   DateTime @updatedAt @db.Timestamptz
-}
-
-// [{"code":603001000,"name":"Ajuy","barangays":[{"municipality_code":603001000,"municipality_name":"Ajuy","barangay_code":603001001,"barangay_name":"Adcadarao"},{"municipality_code":603001000,"municipality_name":"Ajuy","barangay_code":603001002,"barangay_name":"Agbobolo"}]
+// model User {
+//   id          String   @id @default(cuid())
+//   email       String   @unique
+//   password    String
+//   firstName   String
+//   lastName    String
+//   company     Company  @relation(fields: [companyId], references: [id])
+//   companyId   String
+//   permissions String[]
+//   createdAt   DateTime @default(now()) @db.Timestamptz
+//   updatedAt   DateTime @updatedAt @db.Timestamptz
+// }
 
 model Municipality {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(uuid())
   name      String
   code      String   @unique // official PGIS code
   createdAt DateTime @default(now())
@@ -50,14 +48,77 @@ model Municipality {
 }
 
 model Barangay {
-  id             String       @id @default(uuid()) @db.Uuid
+  id             String       @id @default(uuid())
   name           String
   municipality   Municipality @relation(fields: [municipalityId], references: [id], onDelete: Cascade)
-  municipalityId String       @db.Uuid
+  municipalityId String
   officialCode   String       @unique // official PGIS code
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  Project        Project[]
 
   @@unique([name, municipalityId])
   @@index([officialCode])
+}
+
+enum ProjectStatus {
+  PLANNED
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+model Project {
+  id                 String             @id @default(uuid())
+  company            Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId          String
+  projectCode        String?            @unique
+  title              String
+  startDate          String // year only
+  endDate            String? // year only
+  totalAreaDeveloped Float? // in hectares
+  status             ProjectStatus      @default(PLANNED)
+  description        String?
+  totalProjectCost   Float?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  barangay           Barangay           @relation(fields: [barangayId], references: [id], onDelete: Cascade)
+  barangayId         String
+  // relations
+  components         ProjectComponent[]
+  attachments        Attachment[]
+
+  @@index([status])
+  @@index([startDate])
+}
+
+model Component {
+  id             String   @id @default(uuid())
+  componentTitle String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model ProjectComponent {
+  id                   String   @id @default(uuid())
+  project              Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId            String
+  componentTitle       String
+  componentDescription String?
+  componentCost        Float
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model Attachment {
+  id         String   @id @default(uuid())
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId  String?
+  url        String // storage path (Supabase bucket URL or signed URL)
+  uploadedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([projectId])
 }
