@@ -23,7 +23,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${roboto.className} antialiased`}>
         <CompanyProvider>
-          <main className="min-h-screen bg-background">{children}</main>
+          <main className="min-h-screen bg-background p-2">{children}</main>
           <Toaster />
         </CompanyProvider>
       </body>

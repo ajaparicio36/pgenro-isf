@@ -16,9 +16,11 @@ import {
   Loader2,
   AlertCircle,
   Download,
+  Edit,
 } from 'lucide-react';
 import { DASHBOARD_ROUTES } from '@/lib/routes';
 import { Separator } from '@/components/ui/separator';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import Image from 'next/image';
 import Lightbox from 'yet-another-react-lightbox';
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
@@ -154,6 +156,15 @@ const ProjectViewPage = ({ projectId }: ProjectViewPageProps) => {
   return (
     <>
       <div className="container mx-auto py-6 space-y-6">
+        {/* Breadcrumbs */}
+        <Breadcrumbs
+          items={[
+            { label: 'Dashboard', href: DASHBOARD_ROUTES.root },
+            { label: 'Projects', href: DASHBOARD_ROUTES.projects },
+            { label: project.title, current: true },
+          ]}
+        />
+
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button
@@ -165,11 +176,22 @@ const ProjectViewPage = ({ projectId }: ProjectViewPageProps) => {
             Back to Projects
           </Button>
           <div className="flex-1">
-            <div className="flex items-center gap-4">
-              <h1 className="text-3xl font-bold">{project.title}</h1>
-              <Badge className={getStatusColor(project.status)}>
-                {project.status}
-              </Badge>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <h1 className="text-3xl font-bold">{project.title}</h1>
+                <Badge className={getStatusColor(project.status)}>
+                  {project.status}
+                </Badge>
+              </div>
+              <Button
+                onClick={() =>
+                  router.push(`${DASHBOARD_ROUTES.projects}/${project.id}/edit`)
+                }
+                className="flex items-center gap-2"
+              >
+                <Edit className="h-4 w-4" />
+                Edit Project
+              </Button>
             </div>
             {project.projectCode && (
               <p className="text-muted-foreground">

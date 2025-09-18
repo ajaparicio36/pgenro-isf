@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DASHBOARD_ROUTES } from '@/lib/routes';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 
 interface EditProjectPageProps {
   params: Promise<{ id: string }>;
@@ -24,7 +25,7 @@ const EditProjectPage = ({ params }: EditProjectPageProps) => {
   const { project, isLoading, error } = useProject(projectId || '');
 
   const handleSuccess = () => {
-    router.push(DASHBOARD_ROUTES.projects);
+    router.push(`${DASHBOARD_ROUTES.projects}/${projectId}`);
   };
 
   if (isLoading) {
@@ -63,10 +64,29 @@ const EditProjectPage = ({ params }: EditProjectPageProps) => {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: DASHBOARD_ROUTES.root },
+          { label: 'Projects', href: DASHBOARD_ROUTES.projects },
+          {
+            label: project.title,
+            href: `${DASHBOARD_ROUTES.projects}/${projectId}`,
+          },
+          { label: 'Edit', current: true },
+        ]}
+      />
+
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => router.back()}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() =>
+            router.push(`${DASHBOARD_ROUTES.projects}/${projectId}`)
+          }
+        >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          Back to Project
         </Button>
         <div>
           <h1 className="text-3xl font-bold">Edit Project</h1>

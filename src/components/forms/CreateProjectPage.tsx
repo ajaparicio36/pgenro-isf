@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DASHBOARD_ROUTES } from '@/lib/routes';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 
 const CreateProjectPage = () => {
   const router = useRouter();
@@ -17,10 +18,23 @@ const CreateProjectPage = () => {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: DASHBOARD_ROUTES.root },
+          { label: 'Projects', href: DASHBOARD_ROUTES.projects },
+          { label: 'Create Project', current: true },
+        ]}
+      />
+
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => router.back()}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push(DASHBOARD_ROUTES.projects)}
+        >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          Back to Projects
         </Button>
         <div>
           <h1 className="text-3xl font-bold">Create New Project</h1>

@@ -13,6 +13,7 @@ import {
   DollarSign,
   Package,
   Edit,
+  ArrowLeft,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -30,6 +31,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import ImportProjectsDialog from '@/components/projects/ImportProjectsDialog';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 
 const ProjectsPage = () => {
   const { projects, isLoading, error, mutate } = useProjects();
@@ -101,6 +103,23 @@ const ProjectsPage = () => {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: DASHBOARD_ROUTES.root },
+          { label: 'Projects', current: true },
+        ]}
+      />
+
+      <div className="flex items-center gap-4 mb-6">
+        <Link href={DASHBOARD_ROUTES.root}>
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+        </Link>
+      </div>
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Projects</h1>
@@ -171,7 +190,7 @@ const ProjectsPage = () => {
 
                   {project.totalProjectCost && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <DollarSign className="h-4 w-4" />
+                      <Package className="h-4 w-4" />
                       <span>₱{project.totalProjectCost.toLocaleString()}</span>
                     </div>
                   )}

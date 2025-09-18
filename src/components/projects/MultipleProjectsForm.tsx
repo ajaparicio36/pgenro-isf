@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ComboBox } from '@/components/ui/combobox';
 import {
   Form,
   FormControl,
@@ -30,7 +31,6 @@ import {
   Package,
   AlertCircle,
   CheckCircle2,
-  Search,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMunicipalities } from '@/hooks/useProjects';
@@ -97,7 +97,6 @@ const MultipleProjectsForm = ({
   const [creatingStatus, setCreatingStatus] = useState<{
     [key: number]: 'pending' | 'creating' | 'success' | 'error';
   }>({});
-  const [barangaySearch, setBarangaySearch] = useState('');
 
   const form = useForm<MultipleProjectsFormData>({
     resolver: zodResolver(multipleProjectsSchema),
@@ -202,27 +201,14 @@ const MultipleProjectsForm = ({
     }
   };
 
-  // Filter municipalities and barangays based on search
-  const filteredMunicipalities = municipalities
-    .filter((municipality) => {
-      if (!barangaySearch) return true;
-      const searchLower = barangaySearch.toLowerCase();
-      return (
-        municipality.name.toLowerCase().includes(searchLower) ||
-        municipality.barangays.some((barangay) =>
-          barangay.name.toLowerCase().includes(searchLower)
-        )
-      );
-    })
-    .map((municipality) => ({
-      ...municipality,
-      barangays: municipality.barangays.filter(
-        (barangay) =>
-          !barangaySearch ||
-          barangay.name.toLowerCase().includes(barangaySearch.toLowerCase()) ||
-          municipality.name.toLowerCase().includes(barangaySearch.toLowerCase())
-      ),
-    }));
+  // Prepare combobox groups for municipalities and barangays
+  const locationGroups = municipalities.map((municipality) => ({
+    label: municipality.name,
+    options: municipality.barangays.map((barangay) => ({
+      value: barangay.id,
+      label: barangay.name,
+    })),
+  }));
 
   if (municipalitiesLoading) {
     return (
@@ -355,61 +341,15 @@ const MultipleProjectsForm = ({
                         <FormItem>
                           <FormLabel>Assign Barangay *</FormLabel>
                           <FormControl>
-                            <div className="space-y-2">
-                              <div className="relative">
-                                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                  placeholder="Search municipalities or barangays..."
-                                  value={barangaySearch}
-                                  onChange={(e) =>
-                                    setBarangaySearch(e.target.value)
-                                  }
-                                  className="pl-9"
-                                  disabled={isSubmitting}
-                                />
-                              </div>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                                disabled={isSubmitting}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select the correct barangay" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {filteredMunicipalities.length === 0 ? (
-                                    <SelectItem value="no-results" disabled>
-                                      No results found
-                                    </SelectItem>
-                                  ) : (
-                                    filteredMunicipalities.map(
-                                      (municipality) => (
-                                        <React.Fragment key={municipality.id}>
-                                          <SelectItem
-                                            value={municipality.id}
-                                            disabled
-                                            className="font-semibold text-gray-900"
-                                          >
-                                            {municipality.name}
-                                          </SelectItem>
-                                          {municipality.barangays.map(
-                                            (barangay) => (
-                                              <SelectItem
-                                                key={barangay.id}
-                                                value={barangay.id}
-                                                className="pl-6"
-                                              >
-                                                {barangay.name}
-                                              </SelectItem>
-                                            )
-                                          )}
-                                        </React.Fragment>
-                                      )
-                                    )
-                                  )}
-                                </SelectContent>
-                              </Select>
-                            </div>
+                            <ComboBox
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              placeholder="Select the correct barangay"
+                              searchPlaceholder="Search municipalities or barangays..."
+                              groups={locationGroups}
+                              disabled={isSubmitting}
+                              className="w-full"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

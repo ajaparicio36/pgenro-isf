@@ -13,7 +13,9 @@ import InlineReportViewer from '@/components/reports/InlineReportViewer';
 import ChartViewer from '@/components/charts/ChartViewer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, X } from 'lucide-react';
+import { MessageCircle, X, FolderOpen, Plus } from 'lucide-react';
+import Link from 'next/link';
+import { DASHBOARD_ROUTES } from '@/lib/routes';
 import 'leaflet/dist/leaflet.css';
 
 const DashboardPage = () => {
@@ -93,14 +95,28 @@ const DashboardPage = () => {
             AI for insights!
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={toggleChatbot}
-          className="hidden md:flex"
-        >
-          <MessageCircle className="h-4 w-4 mr-2" />
-          AI Assistant
-        </Button>
+        <div className="flex items-center gap-2 flex-col md:flex-row">
+          <Link href={DASHBOARD_ROUTES.projects}>
+            <Button variant="outline">
+              <FolderOpen className="h-4 w-4 mr-2" />
+              View Projects
+            </Button>
+          </Link>
+          <Link href={DASHBOARD_ROUTES.forms}>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Project
+            </Button>
+          </Link>
+          <Button
+            variant="outline"
+            onClick={toggleChatbot}
+            className="hidden md:flex"
+          >
+            <MessageCircle className="h-4 w-4 mr-2" />
+            AI Assistant
+          </Button>
+        </div>
       </div>
 
       {error && (
