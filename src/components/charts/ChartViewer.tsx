@@ -534,8 +534,8 @@ const ChartViewer = ({ chartData, onClose }: ChartViewerProps) => {
     };
 
     const commonProps = {
-      width: '100%',
-      height: '100%',
+      width: '100%' as const,
+      height: '100%' as const,
     };
 
     switch (type) {
