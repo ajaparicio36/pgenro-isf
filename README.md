@@ -1,36 +1,151 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Geotraizer (PGENRO-ISF)
 
-## Getting Started
+A GIS-enabled web application for tracking Integrated Social Forestry (ISF) projects, stewards, and land use across municipalities and barangays.
 
-First, run the development server:
+## Prerequisites
+
+- **Node.js** 18+ 
+- **Yarn** (package manager)
+- **PostgreSQL** database
+- **Supabase** account (for authentication)
+- **OpenAI API key** (for AI-powered data import, reports, and chatbot)
+
+## Setup
+
+### 1. Clone and install dependencies
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repo-url>
+cd geotraizer
+yarn install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This runs `prisma generate` automatically via the `postinstall` script.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2. Configure environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Copy `.env` and fill in your values:
 
-## Learn More
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string (get from Supabase: Settings > Database > Connection string) |
+| `SUPABASE_URL` | Supabase project URL (e.g. `https://kyzrgghgrjdsyozbimmt.supabase.co`) |
+| `SUPABASE_ROLE_KEY` | Supabase **service_role** key (server-side only, never exposed to client) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Same as `SUPABASE_URL` (client-safe, prefixed with `NEXT_PUBLIC_`) |
+| `NEXT_PUBLIC_ROLE_KEY` | Supabase **anon** key (client-safe) |
+| `OPENAI_API_KEY` | OpenAI API key (from https://platform.openai.com/api-keys) |
 
-To learn more about Next.js, take a look at the following resources:
+### 3. Set up Supabase Auth
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Create a project at [supabase.com](https://supabase.com)
+2. Enable Email/Password auth in Authentication > Providers
+3. Copy the project URL, anon key, and service_role key to your `.env`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 4. Set up the database
 
-## Deploy on Vercel
+```bash
+# Apply Prisma migrations to create all tables
+yarn prisma migrate dev
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Seed municipalities and barangays (Iloilo province)
+yarn prisma db seed
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# [Optional] Seed demo user, projects, stewards, and evaluations
+yarn db:seed-demo
+```
+
+This creates a verified demo account (`admin@geotraizer.com` / `Asdf1234!`) with 8 sample projects across 8 municipalities, 5 stewards, and 5 evaluation records.
+
+### 5. Start the development server
+
+```bash
+yarn dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 15 (App Router) |
+| UI | React 19, Tailwind CSS 4, shadcn/ui, Radix Primitives |
+| Database | PostgreSQL via Prisma ORM |
+| Auth | Supabase Auth (email/password, SSR sessions) |
+| Maps | Leaflet + react-leaflet + leaflet-draw |
+| Charts | Recharts |
+| AI | OpenAI (GPT-4 / GPT-4o-mini) |
+| Validation | Zod + react-hook-form |
+| Data Fetching | SWR |
+
+## Data Model
+
+The app tracks projects and stewards at the barangay (village) level:
+
+- **Municipality** — Philippine municipality with PSGC code
+- **Barangay** — Village with PSGC code, linked to a municipality
+- **Project** — ISF project with status, cost, area, date range, components, attachments
+- **Steward** — Community steward with CSC certification, land area (GeoJSON polygon), evaluations
+
+Barangay boundaries are displayed as GeoJSON polygons on the map, matched via PSGC official codes.
+
+## Geospatial Data
+
+The barangay boundary data comes from [altcoder/philippines-psgc-shapefiles](https://github.com/altcoder/philippines-psgc-shapefiles):
+
+- `public/province_sub.zip` — Panay Island barangay shapefile source
+- `public/data/province_barangays.json` — Pre-converted GeoJSON (Iloilo province, 1,721 barangays, 43 municipalities)
+
+### Regenerating seed data for other provinces
+
+To seed a different province:
+
+1. Export the desired province from the full PH shapefile to GeoJSON using QGIS or `ogr2ogr`
+2. Replace `public/data/province_barangays.json` with the new GeoJSON
+3. Download the PSGC municipality reference:
+   ```bash
+   curl -L https://raw.githubusercontent.com/altcoder/philippines-psgc-shapefiles/main/dist/PH_Adm3_MuniCities.csv -o /tmp/PH_Adm3_MuniCities.csv
+   ```
+4. Run the generator:
+   ```bash
+   python3 src/seed/generate-filtered-municipalities.py \
+     --geojson public/data/your_province_barangays.json \
+     --csv /tmp/PH_Adm3_MuniCities.csv
+   ```
+5. Re-seed: `yarn prisma db seed`
+
+## AI Features
+
+The app uses OpenAI for:
+- **Import from Excel** — Upload `.xlsx`/`.csv` files of project or steward data; AI extracts structured records
+- **Chatbot** — Ask questions about projects and data
+- **Report generation** — AI-powered narrative analysis
+- **Chart insights** — AI-generated explanations of chart trends
+
+These features require `OPENAI_API_KEY` to be set.
+
+## Build
+
+```bash
+yarn build
+yarn start
+```
+
+## Project Structure
+
+```
+src/
+  app/             # Next.js App Router pages & API routes
+  components/      # React components (auth, chatbot, charts, forms, map, projects, reports, stewards, ui)
+  hooks/           # Custom hooks (useAuth, useProjects, useStewards, useHeatmap, etc.)
+  lib/             # Utility libraries
+  schemas/         # Zod validation schemas
+  seed/            # Database seed scripts & generators
+  utils/           # Prisma client, Supabase clients, shapefile loader, AI prompts
+  middleware.ts    # Supabase auth session middleware
+prisma/
+  schema.prisma    # Database schema (9 models)
+  migrations/      # Migration history
+public/
+  data/            # Barangay GeoJSON data
+```

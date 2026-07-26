@@ -8,7 +8,12 @@
     "start": "next start",
     "lint": "eslint",
     "prepare": "husky",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "db:seed": "npx tsx src/seed/seed.ts",
+    "db:seed-demo": "npx tsx src/seed/seed-demo.ts"
+  },
+  "prisma": {
+    "seed": "npx tsx src/seed/seed.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -99,5 +104,6 @@
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.8",
     "typescript": "^5"
-  }
+  },
+  "packageManager": "yarn@4.17.1+sha512.ccbfabf7d7b6b32075088be9386fb9a2e00bb6887ef07fa56effabc890a56d53da1ccc4128d62db245fcbd3961b236d75335bdf7d5320ed6eafb7588b7ad4697"
 }

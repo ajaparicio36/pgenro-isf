@@ -5,8 +5,9 @@ import dynamic from 'next/dynamic';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertCircle, Trash2, RotateCcw } from 'lucide-react';
-import * as L from 'leaflet';
-import 'leaflet-draw';
+import type { FeatureGroup as LFeatureGroup, Map as LMap, Layer as LLayer } from 'leaflet';
+
+let L: typeof import('leaflet') | null = null;
 
 // Dynamically import Leaflet components to avoid SSR issues
 const MapContainer = dynamic(
@@ -53,20 +54,18 @@ const DrawableMap = ({
 }: DrawableMapProps) => {
   const [isClient, setIsClient] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [drawnItems, setDrawnItems] = useState<L.FeatureGroup | null>(null);
+  const [drawnItems, setDrawnItems] = useState<LFeatureGroup | null>(null);
   const [leafletLoaded, setLeafletLoaded] = useState(false);
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<LMap | null>(null);
 
   useEffect(() => {
     setIsClient(true);
 
-    // Load Leaflet and Leaflet Draw
     const loadLeaflet = async () => {
       if (typeof window !== 'undefined') {
-        const L = (await import('leaflet')).default;
+        L = await import('leaflet');
         await import('leaflet-draw');
 
-        // Fix for default markers
         delete (L.Icon.Default.prototype as any)._getIconUrl;
         L.Icon.Default.mergeOptions({
           iconRetinaUrl: '/leaflet/marker-icon-2x.png',
@@ -81,7 +80,7 @@ const DrawableMap = ({
     loadLeaflet();
   }, []);
 
-  const calculateArea = useCallback((layer: L.Layer) => {
+  const calculateArea = useCallback((layer: LLayer) => {
     if (typeof window === 'undefined') return 0;
 
     try {
@@ -118,7 +117,7 @@ const DrawableMap = ({
       drawnItems.addLayer(layer);
 
       // Clear previous drawings (only allow one polygon)
-      drawnItems.eachLayer((existingLayer: L.Layer) => {
+      drawnItems.eachLayer((existingLayer: LLayer) => {
         if (existingLayer !== layer) {
           drawnItems.removeLayer(existingLayer);
         }
@@ -136,7 +135,7 @@ const DrawableMap = ({
   const handleEdited = useCallback(
     (e: any) => {
       const layers = e.layers;
-      layers.eachLayer((layer: L.Layer) => {
+      layers.eachLayer((layer: LLayer) => {
         const geoJson = (layer as any).toGeoJSON();
         const area = calculateArea(layer);
 
@@ -168,7 +167,7 @@ const DrawableMap = ({
   useEffect(() => {
     if (mapRef.current && leafletLoaded && !drawnItems) {
       const map = mapRef.current;
-      const drawnItemsLayer = new L.FeatureGroup();
+      const drawnItemsLayer = new L!.FeatureGroup();
       map.addLayer(drawnItemsLayer);
       setDrawnItems(drawnItemsLayer);
 
@@ -193,7 +192,7 @@ const DrawableMap = ({
     if (initialGeoJson && drawnItems && leafletLoaded) {
       try {
         const geoJsonData = JSON.parse(initialGeoJson);
-        const layer = L.geoJSON(geoJsonData);
+        const layer = L!.geoJSON(geoJsonData);
 
         drawnItems.clearLayers();
         drawnItems.addLayer(layer.getLayers()[0]);

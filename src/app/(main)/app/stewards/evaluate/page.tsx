@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSteward } from '@/hooks/useStewards';
 import EvaluateStewardForm from '@/components/forms/EvaluateStewardForm';
@@ -11,7 +11,7 @@ import { ArrowLeft, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { DASHBOARD_ROUTES } from '@/lib/routes';
 
-const EvaluateStewardPage = () => {
+const EvaluateStewardContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const stewardId = searchParams.get('stewardId');
@@ -140,4 +140,34 @@ const EvaluateStewardPage = () => {
   );
 };
 
-export default EvaluateStewardPage;
+export default function EvaluateStewardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container mx-auto p-6 space-y-6">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-10 w-32" />
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+          </div>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      }
+    >
+      <EvaluateStewardContent />
+    </Suspense>
+  );
+}
